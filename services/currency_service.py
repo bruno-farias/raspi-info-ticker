@@ -75,6 +75,11 @@ class CurrencyService:
         cached_data = cache_service.get(cache_key)
         if cached_data:
             self.logger.debug("Using cached exchange rates")
+            # Update the timestamp to show when this cached data is being returned
+            # Keep original data timestamp but add cache indicator
+            cached_data = cached_data.copy()  # Don't modify original cached data
+            original_time = cached_data.get('timestamp', 'Unknown')
+            cached_data['timestamp'] = f"{original_time} (cached)"
             return cached_data
         
         # Fetch fresh data

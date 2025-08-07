@@ -27,19 +27,10 @@ sudo apt-get install -y libcairo2-dev libgirepository1.0-dev pkg-config
 echo "Installing numpy dependencies..."
 sudo apt-get install -y python3-numpy python3-scipy libatlas-base-dev gfortran
 
-# Create virtual environment
-echo "Creating Python virtual environment..."
-python3 -m venv venv
-
-# Activate virtual environment
-source venv/bin/activate
-
-# Upgrade pip
-pip install --upgrade pip
-
-# Install Python dependencies
-echo "Installing Python dependencies..."
-pip install -r requirements.txt
+# Install Python dependencies system-wide (needed for GPIO access)
+echo "Installing Python dependencies system-wide..."
+sudo pip3 install --break-system-packages --upgrade pip
+sudo pip3 install --break-system-packages -r requirements.txt
 
 # Copy Waveshare e-Paper library if available
 if [ -d "../e-Paper/RaspberryPi_JetsonNano/python/lib/waveshare_epd" ]; then
@@ -64,9 +55,12 @@ echo ""
 echo "Setup complete!"
 echo ""
 echo "Next steps:"
-echo "1. Edit .env and add your FREE_CURRENCY_API_KEY"
+echo "1. Edit .env and add your FREE_CURRENCY_API_KEY and CRYPTO_API_KEY"
 echo "2. If SPI warning appeared, enable SPI: sudo raspi-config -> Interface Options -> SPI -> Enable"
-echo "3. To activate the environment: source venv/bin/activate"
-echo "4. To run the application: python main.py"
+echo "3. To run the application: ./run.sh"
+echo "   (or directly: sudo python3 main.py)"
 echo ""
-echo "The app will run in simulation mode if e-paper display is not connected."
+echo "Features:"
+echo "- Configurable screen order and caching in .env"
+echo "- SVG logo support for Bitcoin screen"  
+echo "- The app will run in simulation mode if e-paper display is not connected"
