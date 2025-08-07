@@ -79,6 +79,57 @@ class DisplayService:
         
         return font_large, font_medium, font_small
     
+    def draw_btc_logo(self, draw, x, y, size=35):
+        """
+        Draw a simple Bitcoin logo at the specified position
+        
+        Args:
+            draw: PIL ImageDraw object
+            x (int): X position for logo center
+            y (int): Y position for logo center
+            size (int): Size of the logo
+        """
+        # Calculate bounds
+        half_size = size // 2
+        left = x - half_size
+        top = y - half_size
+        right = x + half_size
+        bottom = y + half_size
+        
+        # Draw outer circle
+        circle_margin = 2
+        draw.ellipse(
+            [(left + circle_margin, top + circle_margin), 
+             (right - circle_margin, bottom - circle_margin)], 
+            outline=0, width=2
+        )
+        
+        # Draw the "₿" symbol - simplified Bitcoin symbol
+        center_x = x
+        center_y = y
+        
+        # "B" dimensions
+        b_width = size // 3
+        b_height = size // 2
+        b_left = center_x - b_width // 2
+        b_top = center_y - b_height // 2
+        b_right = b_left + b_width
+        b_bottom = b_top + b_height
+        b_middle = center_y
+        
+        # Vertical line of the "B"
+        draw.line([(b_left, b_top), (b_left, b_bottom)], fill=0, width=2)
+        
+        # Horizontal lines of the "B"
+        draw.line([(b_left, b_top), (b_right - 4, b_top)], fill=0, width=2)
+        draw.line([(b_left, b_middle), (b_right - 2, b_middle)], fill=0, width=2)
+        draw.line([(b_left, b_bottom), (b_right - 4, b_bottom)], fill=0, width=2)
+        
+        # Currency symbol lines (the vertical lines through the B)
+        currency_offset = 2
+        draw.line([(center_x - currency_offset, b_top - 6), (center_x - currency_offset, b_bottom + 6)], fill=0, width=1)
+        draw.line([(center_x + currency_offset, b_top - 6), (center_x + currency_offset, b_bottom + 6)], fill=0, width=1)
+    
     def create_display_image(self, screen_data):
         """
         Create an image with configurable screen data
@@ -102,6 +153,10 @@ class DisplayService:
             title_text = f"{title} ({screen_num}/{total_screens})"
             draw.text((10, 10), title_text, font=font_large, fill=0)
             
+            # Check if this screen should show a logo
+            show_logo = screen_data.get('show_logo', False)
+            logo_type = screen_data.get('logo_type', None)
+            
             # Get formatted display lines
             display_function = screen_data.get('display_function')
             rates_data = screen_data.get('rates_data')
@@ -112,6 +167,13 @@ class DisplayService:
                 for line in lines[:2]:  # Max 2 lines for rates
                     draw.text((10, y_pos), line, font=font_medium, fill=0)
                     y_pos += 20
+            
+            # Draw logo if requested
+            if show_logo and logo_type == 'btc':
+                # Position logo on the right side, centered vertically for the rates area
+                logo_x = self.width - 40  # 40 pixels from right edge
+                logo_y = 50  # Center it in the rates display area
+                self.draw_btc_logo(draw, logo_x, logo_y, size=35)
             
             # Data timestamp
             data_timestamp = rates_data.get('timestamp', 'N/A')

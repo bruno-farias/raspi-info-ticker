@@ -52,13 +52,20 @@ class DisplayConfig:
         rates_data = data_func()
         
         if rates_data:
-            return {
+            screen_data = {
                 'title': title,
                 'rates_data': rates_data,
                 'display_function': display_func,
                 'screen_number': self.current_screen + 1,
                 'total_screens': len(self.screens)
             }
+            
+            # Add logo information for Bitcoin screen
+            if title == "Bitcoin Prices":
+                screen_data['show_logo'] = True
+                screen_data['logo_type'] = 'btc'
+            
+            return screen_data
         return None
     
     def next_screen(self):
