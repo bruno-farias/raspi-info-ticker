@@ -130,11 +130,6 @@ class DisplayService:
         assets_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets')
         logo_files = [
             'bitcoin.svg',
-            'bitcoin-logo.svg',
-            'bitcoin-bw.webp', 
-            'wrapped-bitcoin.png',
-            'bitcoin.png',
-            'btc-logo.svg'
         ]
         
         for filename in logo_files:
