@@ -2,3 +2,4 @@ python-dotenv==1.0.1
 freecurrencyapi==0.1.0
 Pillow==10.4.0
 requests==2.32.3
+cairosvg>=2.5.0

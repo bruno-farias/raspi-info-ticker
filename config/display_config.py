@@ -27,12 +27,28 @@ class DisplayConfig:
         self.crypto_service = CryptoService(crypto_api_key)
         self.crypto_source = os.getenv('CRYPTO_API_SOURCE', 'coingecko')
         
-        # Define the screens to cycle through
-        # Each screen is a tuple of (title, data_function, display_function)
-        self.screens = [
-            ("Exchange Rates", self._get_fiat_rates, self._display_fiat_rates),
-            ("Bitcoin Prices", self._get_btc_rates, self._display_btc_rates),
-        ]
+        # Define available screens
+        self.available_screens = {
+            'exchange_rates': ("Exchange Rates", self._get_fiat_rates, self._display_fiat_rates),
+            'bitcoin_prices': ("Bitcoin Prices", self._get_btc_rates, self._display_btc_rates),
+        }
+        
+        # Get screen order from environment or use default
+        screen_order = os.getenv('SCREEN_ORDER', 'bitcoin_prices,exchange_rates')
+        ordered_screen_ids = [s.strip() for s in screen_order.split(',') if s.strip()]
+        
+        # Build screens list in the configured order
+        self.screens = []
+        for screen_id in ordered_screen_ids:
+            if screen_id in self.available_screens:
+                self.screens.append(self.available_screens[screen_id])
+            else:
+                print(f"Warning: Unknown screen '{screen_id}' in SCREEN_ORDER")
+        
+        # Fallback if no valid screens found
+        if not self.screens:
+            print("No valid screens found, using default order")
+            self.screens = list(self.available_screens.values())
     
     def get_screen_count(self):
         """Get total number of configured screens"""

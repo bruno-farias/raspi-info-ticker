@@ -81,7 +81,7 @@ class DisplayService:
     
     def load_btc_logo(self, size=35):
         """
-        Load and prepare Bitcoin logo image
+        Load and prepare Bitcoin logo image (supports PNG, WebP, SVG)
         
         Args:
             size (int): Desired size for the logo
@@ -89,33 +89,136 @@ class DisplayService:
         Returns:
             PIL.Image: Processed Bitcoin logo or None if not found
         """
-        try:
-            logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'wrapped-bitcoin.png')
-            
+        # Try different file formats in order of preference
+        assets_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets')
+        logo_files = [
+            'bitcoin.svg',
+            'bitcoin-logo.svg',
+            'bitcoin-bw.webp', 
+            'wrapped-bitcoin.png',
+            'bitcoin.png',
+            'btc-logo.svg'
+        ]
+        
+        for filename in logo_files:
+            logo_path = os.path.join(assets_dir, filename)
             if os.path.exists(logo_path):
-                # Load the image
-                logo = Image.open(logo_path)
-                
-                # Convert to grayscale if needed
-                if logo.mode != 'L':
-                    logo = logo.convert('L')
-                
-                # Resize to desired size while maintaining aspect ratio
-                logo.thumbnail((size, size), Image.Resampling.LANCZOS)
-                
-                # Convert to 1-bit (monochrome) for e-paper display
-                # Use dithering for better quality
-                logo = logo.convert('1', dither=Image.Dither.FLOYDSTEINBERG)
-                
-                self.logger.debug(f"Bitcoin logo loaded: {logo.size}")
-                return logo
-            else:
-                self.logger.warning(f"Bitcoin logo not found at {logo_path}")
-                return None
-                
+                try:
+                    return self._load_logo_file(logo_path, size)
+                except Exception as e:
+                    self.logger.warning(f"Failed to load {filename}: {e}")
+                    continue
+        
+        self.logger.warning(f"No Bitcoin logo found in {assets_dir}")
+        return None
+    
+    def _load_logo_file(self, logo_path, size):
+        """
+        Load a logo file (PNG, WebP, or SVG)
+        
+        Args:
+            logo_path (str): Path to the logo file
+            size (int): Desired size
+            
+        Returns:
+            PIL.Image: Processed logo image
+        """
+        file_ext = os.path.splitext(logo_path)[1].lower()
+        
+        if file_ext == '.svg':
+            return self._load_svg_logo(logo_path, size)
+        else:
+            return self._load_bitmap_logo(logo_path, size)
+    
+    def _load_svg_logo(self, svg_path, size):
+        """
+        Load and convert SVG logo to bitmap
+        
+        Args:
+            svg_path (str): Path to SVG file
+            size (int): Desired size
+            
+        Returns:
+            PIL.Image: Converted bitmap image
+        """
+        try:
+            # Try to import cairosvg for SVG conversion
+            import cairosvg
+            from io import BytesIO
+            
+            # Convert SVG to PNG in memory
+            png_data = cairosvg.svg2png(
+                url=svg_path,
+                output_width=size,
+                output_height=size
+            )
+            
+            # Load PNG data into PIL Image
+            logo = Image.open(BytesIO(png_data))
+            
+            # Convert to grayscale
+            if logo.mode != 'L':
+                logo = logo.convert('L')
+            
+            # Convert to 1-bit monochrome for e-paper
+            logo = logo.convert('1', dither=Image.Dither.FLOYDSTEINBERG)
+            
+            self.logger.debug(f"SVG logo loaded and converted: {logo.size}")
+            return logo
+            
+        except ImportError:
+            # Fallback: Try with Pillow's built-in SVG support (limited)
+            self.logger.warning("cairosvg not available, trying alternative SVG loading")
+            
+            try:
+                # Some versions of Pillow can handle simple SVGs
+                logo = Image.open(svg_path)
+                return self._process_bitmap_logo(logo, size)
+            except Exception as e:
+                self.logger.error(f"Cannot load SVG without cairosvg: {e}")
+                raise
+        
         except Exception as e:
-            self.logger.error(f"Error loading Bitcoin logo: {e}")
-            return None
+            self.logger.error(f"Error loading SVG logo: {e}")
+            raise
+    
+    def _load_bitmap_logo(self, logo_path, size):
+        """
+        Load bitmap logo (PNG, WebP, etc.)
+        
+        Args:
+            logo_path (str): Path to bitmap file
+            size (int): Desired size
+            
+        Returns:
+            PIL.Image: Processed bitmap image
+        """
+        logo = Image.open(logo_path)
+        return self._process_bitmap_logo(logo, size)
+    
+    def _process_bitmap_logo(self, logo, size):
+        """
+        Process bitmap logo for e-paper display
+        
+        Args:
+            logo (PIL.Image): Input logo image
+            size (int): Desired size
+            
+        Returns:
+            PIL.Image: Processed logo
+        """
+        # Convert to grayscale if needed
+        if logo.mode != 'L':
+            logo = logo.convert('L')
+        
+        # Resize to desired size while maintaining aspect ratio
+        logo.thumbnail((size, size), Image.Resampling.LANCZOS)
+        
+        # Convert to 1-bit (monochrome) for e-paper display
+        logo = logo.convert('1', dither=Image.Dither.FLOYDSTEINBERG)
+        
+        self.logger.debug(f"Bitmap logo processed: {logo.size}")
+        return logo
     
     def draw_btc_logo_fallback(self, draw, x, y, size=35):
         """
