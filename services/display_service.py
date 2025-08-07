@@ -21,6 +21,13 @@ except ImportError as e:
     print(f"DEBUG: waveshare_epd import failed: {e}")
     print(f"DEBUG: Checked path: {waveshare_path}")
     print(f"DEBUG: Path exists: {os.path.exists(waveshare_path)}")
+except RuntimeError as e:
+    DISPLAY_AVAILABLE = False
+    print(f"DEBUG: GPIO initialization failed (hardware issue): {e}")
+    print("DEBUG: Running in simulation mode - e-paper display not connected or GPIO in use")
+except Exception as e:
+    DISPLAY_AVAILABLE = False
+    print(f"DEBUG: waveshare_epd initialization failed: {e}")
 
 class DisplayService:
     """Service class to handle e-paper display operations"""
