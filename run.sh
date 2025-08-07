@@ -2,5 +2,6 @@
 
 # Run the currency ticker with proper permissions
 cd "$(dirname "$0")"
-source venv/bin/activate
-sudo -E venv/bin/python main.py
+
+# Use the full path to the venv python with sudo
+sudo "$(pwd)/venv/bin/python" main.py
