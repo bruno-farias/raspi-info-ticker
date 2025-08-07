@@ -3,6 +3,11 @@
 """
 Display configuration system for cycling through different information screens
 """
+import os
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
+from services.crypto_service import CryptoService
 
 class DisplayConfig:
     """Configuration class for display cycling system"""
@@ -16,6 +21,11 @@ class DisplayConfig:
         """
         self.currency_service = currency_service
         self.current_screen = 0
+        
+        # Initialize crypto service
+        crypto_api_key = os.getenv('CRYPTO_API_KEY')
+        self.crypto_service = CryptoService(crypto_api_key)
+        self.crypto_source = os.getenv('CRYPTO_API_SOURCE', 'coingecko')
         
         # Define the screens to cycle through
         # Each screen is a tuple of (title, data_function, display_function)
@@ -71,8 +81,8 @@ class DisplayConfig:
         return self.currency_service.get_usd_brl_eur_brl_rates()
     
     def _get_btc_rates(self):
-        """Get BTC/USD and BTC/EUR rates"""
-        return self.currency_service.get_btc_rates()
+        """Get BTC/USD and BTC/EUR rates from crypto service"""
+        return self.crypto_service.get_btc_prices(preferred_source=self.crypto_source)
     
     def _display_fiat_rates(self, rates_data):
         """
@@ -111,7 +121,12 @@ class DisplayConfig:
         lines = []
         if rates_data.get('BTC/USD'):
             lines.append(f"BTC/USD: ${rates_data['BTC/USD']:,}")
+        else:
+            lines.append("BTC/USD: Not available")
+            
         if rates_data.get('BTC/EUR'):
             lines.append(f"BTC/EUR: €{rates_data['BTC/EUR']:,}")
+        else:
+            lines.append("BTC/EUR: Not available")
             
         return lines
