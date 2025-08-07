@@ -68,9 +68,8 @@ class CurrencyTicker:
                         if key not in ['timestamp', 'base_currency'] and value is not None:
                             self.logger.info(f"{key}: {value}")
                 
-                # Create and display image
-                image = self.display_service.create_display_image(screen_data)
-                self.display_service.display_image(image)
+                # Create and display image with smart refresh
+                self.display_service.display_screen_with_smart_refresh(screen_data)
                 
                 # Move to next screen for next iteration
                 self.display_config.next_screen()

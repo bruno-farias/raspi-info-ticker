@@ -63,6 +63,13 @@ class DisplayService:
         
         # Setup font paths
         self.picdir = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'pic')
+        
+        # Track display state for partial refresh optimization
+        self.refresh_count = 0
+        self.partial_refresh_initialized = False
+        self.last_screen_number = None
+        self.base_image = None
+        self.current_cycle = 0
     
     def load_fonts(self):
         """Load fonts with fallback to default"""
@@ -592,12 +599,21 @@ class DisplayService:
         return lines
     
     def initialize_display(self):
-        """Initialize the e-paper display"""
+        """Initialize the e-paper display with partial refresh capability"""
         if not self.simulation_mode:
             try:
+                # Initial full refresh to clear the display
                 self.epd.init()
                 self.epd.Clear(0xFF)
                 self.logger.info("E-paper display initialized and cleared")
+                
+                # Reset partial refresh state
+                self.partial_refresh_initialized = False
+                self.last_screen_number = None
+                self.base_image = None
+                self.current_cycle = 0
+                self.refresh_count = 0
+                self.logger.info("Partial refresh mode ready - ultra-smooth transitions!")
             except Exception as e:
                 self.logger.error(f"Failed to initialize display: {e}")
                 raise
@@ -605,6 +621,7 @@ class DisplayService:
     def display_image(self, image, filename="currency_display_simulation.png"):
         """
         Display image on e-paper display or save to file in simulation mode
+        Uses fast refresh to eliminate blinking, with periodic full refresh to prevent ghosting
         
         Args:
             image (PIL.Image): Image to display
@@ -618,11 +635,105 @@ class DisplayService:
                 self.logger.error(f"Failed to save simulation image: {e}")
         else:
             try:
-                self.epd.display(self.epd.getbuffer(image))
-                self.logger.debug("Image displayed on e-paper")
+                self.refresh_count += 1
+                
+                # Do a full refresh every 20 displays to prevent ghosting
+                if self.refresh_count % 20 == 0:
+                    self.logger.info(f"Performing full refresh #{self.refresh_count//20} to prevent ghosting")
+                    self.epd.init()
+                    self.epd.display(self.epd.getbuffer(image))
+                    # Re-initialize fast mode
+                    self.epd.init_fast()
+                    self.fast_refresh_initialized = True
+                else:
+                    # Use fast refresh for smooth transitions (no blinking)
+                    if not self.fast_refresh_initialized:
+                        self.epd.init_fast()
+                        self.fast_refresh_initialized = True
+                    
+                    self.epd.display_fast(self.epd.getbuffer(image))
+                    self.logger.debug(f"Fast refresh #{self.refresh_count} - no blinking")
+                    
             except Exception as e:
                 self.logger.error(f"Failed to display image: {e}")
                 raise
+    
+    def display_screen_with_smart_refresh(self, screen_data):
+        """
+        Create and display screen with intelligent refresh strategy:
+        - Partial refresh between screens (no blinking)
+        - Full refresh after complete cycle (clean display)
+        """
+        if not screen_data:
+            return
+        
+        # Create the image
+        image = self.create_display_image(screen_data)
+        
+        # Get screen cycle information
+        screen_num = screen_data.get('screen_number', 1)
+        total_screens = screen_data.get('total_screens', 1)
+        
+        if self.simulation_mode:
+            # Simulation mode - just save the image
+            filename = f"screen_{screen_num}_of_{total_screens}.png"
+            image.save(filename)
+            self.logger.info(f"Display simulation saved to {filename}")
+            
+            # Simulate cycle detection BEFORE updating last_screen_number
+            cycle_completed = (self.last_screen_number is not None and 
+                              screen_num == 1 and 
+                              self.last_screen_number == total_screens)
+            if cycle_completed:
+                self.current_cycle += 1
+                self.logger.info(f"🔄 [SIMULATION] Cycle {self.current_cycle} completed")
+            
+            # Track screen numbers even in simulation mode for testing
+            self.last_screen_number = screen_num
+            self.refresh_count += 1
+            return
+        
+        try:
+            # Detect if we've completed a full cycle
+            cycle_completed = (self.last_screen_number is not None and 
+                              screen_num == 1 and 
+                              self.last_screen_number == total_screens)
+            
+            if cycle_completed:
+                self.current_cycle += 1
+                self.logger.info(f"🔄 Cycle {self.current_cycle} completed - performing full refresh")
+                
+                # Full refresh to maintain display quality
+                self.epd.init()
+                self.epd.display(self.epd.getbuffer(image))
+                
+                # Set this as the new base image for partial updates
+                self.base_image = image.copy()
+                self.epd.displayPartBaseImage(self.epd.getbuffer(self.base_image))
+                self.partial_refresh_initialized = True
+                
+            elif not self.partial_refresh_initialized or self.base_image is None:
+                # First display or need to initialize partial refresh
+                self.logger.info("🚀 Initializing partial refresh mode")
+                self.epd.init()
+                self.epd.display(self.epd.getbuffer(image))
+                
+                # Set as base image for partial updates
+                self.base_image = image.copy()
+                self.epd.displayPartBaseImage(self.epd.getbuffer(self.base_image))
+                self.partial_refresh_initialized = True
+                
+            else:
+                # Partial refresh - only update changed parts (super smooth!)
+                self.logger.debug(f"⚡ Partial refresh: Screen {screen_num}/{total_screens} - no blinking")
+                self.epd.displayPartial(self.epd.getbuffer(image))
+            
+            self.last_screen_number = screen_num
+            self.refresh_count += 1
+            
+        except Exception as e:
+            self.logger.error(f"Failed to display screen with smart refresh: {e}")
+            raise
     
     def clear_display(self):
         """Clear the e-paper display"""

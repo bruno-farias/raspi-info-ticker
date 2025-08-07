@@ -92,8 +92,7 @@ class CurrencyService:
             cache_service.set(cache_key, fresh_data, ttl)
         
         return fresh_data
-    
-    def get_btc_rates(self):
+
         """
         Get BTC rates against USD and EUR
         
