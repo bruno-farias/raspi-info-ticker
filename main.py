@@ -15,7 +15,7 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 from services.currency_service import CurrencyService
 from services.display_service import DisplayService
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 class CurrencyTicker:
     """Main application class that orchestrates currency fetching and display"""
@@ -72,8 +72,10 @@ def main():
     api_key = os.getenv('FREE_CURRENCY_API_KEY')
     if not api_key:
         logging.error("FREE_CURRENCY_API_KEY not found in environment variables")
+        logging.info("Available env vars: %s", list(os.environ.keys()))
         return
     
+    logging.info("Starting with API key: %s...", api_key[:10])
     ticker = CurrencyTicker(api_key)
     ticker.run()
 
