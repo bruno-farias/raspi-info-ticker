@@ -491,12 +491,17 @@ class DisplayService:
             
             # Draw logo/icon if requested
             if show_logo:
-                logo_x = self.width - 40  # 40 pixels from right edge
                 # Adjust logo position based on screen type
                 if title == "Weather":
+                    logo_x = self.width - 40  # 40 pixels from right edge
                     logo_y = 45  # Higher position for weather due to more text
+                elif logo_type == 'btc':
+                    # Bitcoin logo in bottom right corner to avoid text overlap
+                    logo_x = self.width - 25  # 25 pixels from right edge
+                    logo_y = self.height - 25  # 25 pixels from bottom edge
                 else:
-                    logo_y = 50  # Original position for other screens
+                    logo_x = self.width - 40  # Default position
+                    logo_y = 50
                 
                 if logo_type == 'btc':
                     # Bitcoin logo
@@ -543,10 +548,6 @@ class DisplayService:
             data_timestamp = rates_data.get('timestamp', 'N/A')
             time_text = f"Data: {data_timestamp}"
             draw.text((10, 75), time_text, font=font_small, fill=0)
-            
-            # Screen refresh timestamp
-            refresh_text = f"Screen: {datetime.now().strftime('%H:%M:%S')}"
-            draw.text((10, 90), refresh_text, font=font_small, fill=0)
             
             # Add border
             draw.rectangle([(0, 0), (self.width-1, self.height-1)], outline=0, width=2)

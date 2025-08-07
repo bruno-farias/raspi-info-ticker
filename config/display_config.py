@@ -36,6 +36,7 @@ class DisplayConfig:
             'exchange_rates': ("Exchange Rates", self._get_fiat_rates, self._display_fiat_rates),
             'bitcoin_prices': ("Bitcoin Prices", self._get_btc_rates, self._display_btc_rates),
             'weather': ("Weather", self._get_weather_data, self._display_weather_data),
+            'clock': ("Clock", self._get_clock_data, self._display_clock_data),
         }
         
         # Get screen order from environment or use default
@@ -54,6 +55,11 @@ class DisplayConfig:
         if not self.screens:
             print("No valid screens found, using default order")
             self.screens = list(self.available_screens.values())
+        
+        # Always add clock as the last screen if not already included
+        clock_screen = self.available_screens['clock']
+        if clock_screen not in self.screens:
+            self.screens.append(clock_screen)
     
     def get_screen_count(self):
         """Get total number of configured screens"""
@@ -237,3 +243,50 @@ class DisplayConfig:
             "left_lines": left_lines,
             "right_details": right_details
         }
+    
+    def _get_clock_data(self):
+        """
+        Get current time and date data
+        
+        Returns:
+            dict: Clock data with current time and date
+        """
+        from datetime import datetime
+        
+        now = datetime.now()
+        
+        return {
+            'time': now.strftime('%H:%M:%S'),
+            'date': now.strftime('%A, %B %d, %Y'),
+            'short_date': now.strftime('%Y-%m-%d'),
+            'timestamp': now.strftime('%H:%M:%S'),
+            'day_name': now.strftime('%A'),
+            'month_name': now.strftime('%B'),
+            'day': now.strftime('%d'),
+            'year': now.strftime('%Y')
+        }
+    
+    def _display_clock_data(self, clock_data):
+        """
+        Format clock data for display
+        
+        Args:
+            clock_data (dict): Clock data
+            
+        Returns:
+            list: List of display lines
+        """
+        if not clock_data:
+            return ["Clock unavailable"]
+        
+        lines = []
+        
+        # Large time display
+        time_str = clock_data.get('time', 'N/A')
+        lines.append(f"Time: {time_str}")
+        
+        # Date display
+        date_str = clock_data.get('date', 'N/A')
+        lines.append(f"{date_str}")
+        
+        return lines
