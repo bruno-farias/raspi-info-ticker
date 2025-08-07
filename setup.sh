@@ -33,6 +33,18 @@ pip install --upgrade pip
 echo "Installing Python dependencies..."
 pip install -r requirements.txt
 
+# Copy Waveshare e-Paper library if available
+if [ -d "../e-Paper/RaspberryPi_JetsonNano/python/lib/waveshare_epd" ]; then
+    echo "Copying Waveshare e-Paper library..."
+    cp -r ../e-Paper/RaspberryPi_JetsonNano/python/lib/waveshare_epd ./
+    cp -r ../e-Paper/RaspberryPi_JetsonNano/python/pic ./
+    echo "Waveshare library copied successfully"
+else
+    echo "Waveshare e-Paper library not found at ../e-Paper/"
+    echo "Please manually copy the waveshare_epd folder to this directory"
+    echo "Or clone it: git clone https://github.com/waveshareteam/e-Paper.git"
+fi
+
 # Copy .env.example to .env if it doesn't exist
 if [ ! -f .env ]; then
     echo "Creating .env file from template..."
