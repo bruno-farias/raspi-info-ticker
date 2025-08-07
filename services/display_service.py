@@ -79,12 +79,12 @@ class DisplayService:
         
         return font_large, font_medium, font_small
     
-    def create_currency_display_image(self, rates_data):
+    def create_display_image(self, screen_data):
         """
-        Create an image with currency information
+        Create an image with configurable screen data
         
         Args:
-            rates_data (dict): Currency rates data or None
+            screen_data (dict): Screen data with title, rates, and display function
             
         Returns:
             PIL.Image: Generated display image
@@ -94,19 +94,24 @@ class DisplayService:
         
         font_large, font_medium, font_small = self.load_fonts()
         
-        if rates_data:
-            # Title
-            draw.text((10, 10), "Exchange Rates", font=font_large, fill=0)
+        if screen_data and screen_data.get('rates_data'):
+            # Title with screen indicator
+            title = screen_data.get('title', 'Info')
+            screen_num = screen_data.get('screen_number', 1)
+            total_screens = screen_data.get('total_screens', 1)
+            title_text = f"{title} ({screen_num}/{total_screens})"
+            draw.text((10, 10), title_text, font=font_large, fill=0)
             
-            # USD/BRL
-            usd_rate = rates_data.get('USD/BRL', 'N/A')
-            usd_text = f"USD/BRL: {usd_rate}"
-            draw.text((10, 35), usd_text, font=font_medium, fill=0)
+            # Get formatted display lines
+            display_function = screen_data.get('display_function')
+            rates_data = screen_data.get('rates_data')
             
-            # EUR/BRL
-            eur_rate = rates_data.get('EUR/BRL', 'N/A')
-            eur_text = f"EUR/BRL: {eur_rate}"
-            draw.text((10, 55), eur_text, font=font_medium, fill=0)
+            if display_function and rates_data:
+                lines = display_function(rates_data)
+                y_pos = 35
+                for line in lines[:2]:  # Max 2 lines for rates
+                    draw.text((10, y_pos), line, font=font_medium, fill=0)
+                    y_pos += 20
             
             # Data timestamp
             data_timestamp = rates_data.get('timestamp', 'N/A')
@@ -120,10 +125,40 @@ class DisplayService:
             # Add border
             draw.rectangle([(0, 0), (self.width-1, self.height-1)], outline=0, width=2)
         else:
-            draw.text((10, 50), "Failed to fetch rates", font=font_medium, fill=0)
+            draw.text((10, 50), "No data available", font=font_medium, fill=0)
             draw.rectangle([(0, 0), (self.width-1, self.height-1)], outline=0, width=1)
         
         return image
+    
+    def create_currency_display_image(self, rates_data):
+        """
+        Backward compatibility method - create image with currency information
+        
+        Args:
+            rates_data (dict): Currency rates data or None
+            
+        Returns:
+            PIL.Image: Generated display image
+        """
+        # Convert old format to new screen_data format
+        screen_data = {
+            'title': 'Exchange Rates',
+            'rates_data': rates_data,
+            'display_function': self._legacy_display_function,
+            'screen_number': 1,
+            'total_screens': 1
+        } if rates_data else None
+        
+        return self.create_display_image(screen_data)
+    
+    def _legacy_display_function(self, rates_data):
+        """Legacy display function for backward compatibility"""
+        lines = []
+        if rates_data.get('USD/BRL'):
+            lines.append(f"USD/BRL: {rates_data['USD/BRL']}")
+        if rates_data.get('EUR/BRL'):
+            lines.append(f"EUR/BRL: {rates_data['EUR/BRL']}")
+        return lines
     
     def initialize_display(self):
         """Initialize the e-paper display"""

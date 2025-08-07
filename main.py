@@ -14,6 +14,7 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
 from services.currency_service import CurrencyService
 from services.display_service import DisplayService
+from config.display_config import DisplayConfig
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
@@ -31,27 +32,44 @@ class CurrencyTicker:
         self.logger = logging.getLogger(__name__)
         self.currency_service = CurrencyService(api_key)
         self.display_service = DisplayService(simulation_mode)
+        self.display_config = DisplayConfig(self.currency_service)
+        
+        # Get refresh interval from environment, default to 15 seconds
+        self.refresh_interval = int(os.getenv('REFRESH_INTERVAL', '15'))
         
     def run(self):
-        """Main function to fetch and display exchange rates"""
+        """Main function to cycle through and display different screens"""
         try:
-            self.logger.info("Starting currency ticker")
+            self.logger.info(f"Starting currency ticker with {self.display_config.get_screen_count()} screens")
+            self.logger.info(f"Refresh interval: {self.refresh_interval} seconds")
             self.display_service.initialize_display()
             
             while True:
-                self.logger.info("Fetching exchange rates...")
-                rates_data = self.currency_service.get_usd_brl_eur_brl_rates()
+                # Get current screen data
+                screen_data = self.display_config.get_current_screen_data()
                 
-                if rates_data:
-                    self.logger.info(f"USD/BRL: {rates_data.get('USD/BRL', 'N/A')}")
-                    self.logger.info(f"EUR/BRL: {rates_data.get('EUR/BRL', 'N/A')}")
+                if screen_data:
+                    title = screen_data.get('title', 'Unknown')
+                    screen_num = screen_data.get('screen_number', 1)
+                    total_screens = screen_data.get('total_screens', 1)
+                    
+                    self.logger.info(f"Displaying screen {screen_num}/{total_screens}: {title}")
+                    
+                    # Log rates information
+                    rates_data = screen_data.get('rates_data', {})
+                    for key, value in rates_data.items():
+                        if key not in ['timestamp', 'base_currency'] and value is not None:
+                            self.logger.info(f"{key}: {value}")
                 
                 # Create and display image
-                image = self.display_service.create_currency_display_image(rates_data)
+                image = self.display_service.create_display_image(screen_data)
                 self.display_service.display_image(image)
                 
-                # Wait 10 seconds before next update
-                time.sleep(10)
+                # Move to next screen for next iteration
+                self.display_config.next_screen()
+                
+                # Wait for refresh interval
+                time.sleep(self.refresh_interval)
                 
         except KeyboardInterrupt:
             self.logger.info("Stopping currency ticker...")

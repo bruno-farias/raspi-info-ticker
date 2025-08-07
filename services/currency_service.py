@@ -68,3 +68,39 @@ class CurrencyService:
             dict: Exchange rates for USD/BRL and EUR/BRL with timestamp
         """
         return self.get_exchange_rates(base_currency='BRL', target_currencies=['USD', 'EUR'])
+    
+    def get_btc_rates(self):
+        """
+        Get BTC rates against USD and EUR
+        
+        Returns:
+            dict: Exchange rates for BTC/USD and BTC/EUR with timestamp
+        """
+        try:
+            self.logger.info("Fetching BTC rates against USD and EUR")
+            
+            # Get BTC rates with USD as base currency
+            usd_rates = self.client.latest(base_currency='USD', currencies=['BTC'])
+            eur_rates = self.client.latest(base_currency='EUR', currencies=['BTC'])
+            
+            btc_usd = None
+            btc_eur = None
+            
+            if 'data' in usd_rates and usd_rates['data'].get('BTC'):
+                # If 1 USD = 0.000025 BTC, then 1 BTC = 1/0.000025 = 40000 USD
+                btc_usd = round(1 / usd_rates['data']['BTC'], 2)
+            
+            if 'data' in eur_rates and eur_rates['data'].get('BTC'):
+                # If 1 EUR = 0.000023 BTC, then 1 BTC = 1/0.000023 = 43478 EUR
+                btc_eur = round(1 / eur_rates['data']['BTC'], 2)
+            
+            return {
+                'BTC/USD': btc_usd,
+                'BTC/EUR': btc_eur,
+                'timestamp': datetime.now().strftime('%H:%M:%S'),
+                'base_currency': 'BTC'
+            }
+                
+        except Exception as e:
+            self.logger.error(f"Error fetching BTC rates: {e}")
+            return None
