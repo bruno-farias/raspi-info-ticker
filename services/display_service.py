@@ -79,9 +79,47 @@ class DisplayService:
         
         return font_large, font_medium, font_small
     
-    def draw_btc_logo(self, draw, x, y, size=35):
+    def load_btc_logo(self, size=35):
         """
-        Draw a simple Bitcoin logo at the specified position
+        Load and prepare Bitcoin logo image
+        
+        Args:
+            size (int): Desired size for the logo
+            
+        Returns:
+            PIL.Image: Processed Bitcoin logo or None if not found
+        """
+        try:
+            logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'bitcoin-bw.webp')
+            
+            if os.path.exists(logo_path):
+                # Load the image
+                logo = Image.open(logo_path)
+                
+                # Convert to grayscale if needed
+                if logo.mode != 'L':
+                    logo = logo.convert('L')
+                
+                # Resize to desired size while maintaining aspect ratio
+                logo.thumbnail((size, size), Image.Resampling.LANCZOS)
+                
+                # Convert to 1-bit (monochrome) for e-paper display
+                # Use dithering for better quality
+                logo = logo.convert('1', dither=Image.Dither.FLOYDSTEINBERG)
+                
+                self.logger.debug(f"Bitcoin logo loaded: {logo.size}")
+                return logo
+            else:
+                self.logger.warning(f"Bitcoin logo not found at {logo_path}")
+                return None
+                
+        except Exception as e:
+            self.logger.error(f"Error loading Bitcoin logo: {e}")
+            return None
+    
+    def draw_btc_logo_fallback(self, draw, x, y, size=35):
+        """
+        Draw a simple Bitcoin logo as fallback when image is not available
         
         Args:
             draw: PIL ImageDraw object
@@ -104,7 +142,7 @@ class DisplayService:
             outline=0, width=2
         )
         
-        # Draw the "₿" symbol - simplified Bitcoin symbol
+        # Draw simple "B" in the center
         center_x = x
         center_y = y
         
@@ -125,7 +163,7 @@ class DisplayService:
         draw.line([(b_left, b_middle), (b_right - 2, b_middle)], fill=0, width=2)
         draw.line([(b_left, b_bottom), (b_right - 4, b_bottom)], fill=0, width=2)
         
-        # Currency symbol lines (the vertical lines through the B)
+        # Currency symbol lines
         currency_offset = 2
         draw.line([(center_x - currency_offset, b_top - 6), (center_x - currency_offset, b_bottom + 6)], fill=0, width=1)
         draw.line([(center_x + currency_offset, b_top - 6), (center_x + currency_offset, b_bottom + 6)], fill=0, width=1)
@@ -173,7 +211,22 @@ class DisplayService:
                 # Position logo on the right side, centered vertically for the rates area
                 logo_x = self.width - 40  # 40 pixels from right edge
                 logo_y = 50  # Center it in the rates display area
-                self.draw_btc_logo(draw, logo_x, logo_y, size=35)
+                
+                # Try to load the image logo first
+                logo_image = self.load_btc_logo(size=35)
+                
+                if logo_image:
+                    # Calculate position for pasting (top-left corner)
+                    paste_x = logo_x - logo_image.width // 2
+                    paste_y = logo_y - logo_image.height // 2
+                    
+                    # Paste the logo image onto the main image
+                    image.paste(logo_image, (paste_x, paste_y))
+                    self.logger.debug(f"Bitcoin image logo displayed at ({paste_x}, {paste_y})")
+                else:
+                    # Fallback to drawn logo
+                    self.draw_btc_logo_fallback(draw, logo_x, logo_y, size=35)
+                    self.logger.debug("Using fallback drawn Bitcoin logo")
             
             # Data timestamp
             data_timestamp = rates_data.get('timestamp', 'N/A')
