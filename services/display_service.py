@@ -544,10 +544,14 @@ class DisplayService:
                         self._draw_weather_fallback(draw, logo_x, logo_y)
                         self.logger.warning("⚠ No weather icon filename provided, using fallback cloud icon")
             
-            # Data timestamp
-            data_timestamp = rates_data.get('timestamp', 'N/A')
-            time_text = f"Data: {data_timestamp}"
-            draw.text((10, 75), time_text, font=font_small, fill=0)
+            # Data timestamp in bottom left corner (skip for clock screen since it shows current time)
+            title = screen_data.get('title', '')
+            if title != 'Clock':
+                data_timestamp = rates_data.get('timestamp', 'N/A')
+                time_text = f"Data: {data_timestamp}"
+                # Position timestamp at bottom left corner
+                timestamp_y = self.height - 15  # 15 pixels from bottom
+                draw.text((5, timestamp_y), time_text, font=font_small, fill=0)
             
             # Add border
             draw.rectangle([(0, 0), (self.width-1, self.height-1)], outline=0, width=2)

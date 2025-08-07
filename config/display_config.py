@@ -39,8 +39,8 @@ class DisplayConfig:
             'clock': ("Clock", self._get_clock_data, self._display_clock_data),
         }
         
-        # Get screen order from environment or use default
-        screen_order = os.getenv('SCREEN_ORDER', 'bitcoin_prices,exchange_rates')
+        # Get screen order from environment or use default (now includes clock)
+        screen_order = os.getenv('SCREEN_ORDER', 'bitcoin_prices,exchange_rates,clock')
         ordered_screen_ids = [s.strip() for s in screen_order.split(',') if s.strip()]
         
         # Build screens list in the configured order
@@ -55,11 +55,6 @@ class DisplayConfig:
         if not self.screens:
             print("No valid screens found, using default order")
             self.screens = list(self.available_screens.values())
-        
-        # Always add clock as the last screen if not already included
-        clock_screen = self.available_screens['clock']
-        if clock_screen not in self.screens:
-            self.screens.append(clock_screen)
     
     def get_screen_count(self):
         """Get total number of configured screens"""
