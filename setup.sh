@@ -1,17 +1,52 @@
 #!/bin/bash
 
 # Setup script for Raspberry Pi
-echo "Setting up Python virtual environment..."
+echo "Setting up currency ticker on Raspberry Pi..."
+
+# Check if running on Raspberry Pi
+if ! grep -q "Raspberry Pi" /proc/cpuinfo 2>/dev/null; then
+    echo "Warning: This script is designed for Raspberry Pi"
+fi
+
+# Enable SPI interface (needed for e-paper display)
+echo "Checking SPI interface..."
+if ! lsmod | grep -q spi_bcm; then
+    echo "SPI might not be enabled. Please run 'sudo raspi-config' and enable SPI in Interface Options"
+fi
+
+# Install system dependencies
+echo "Installing system dependencies..."
+sudo apt-get update
+sudo apt-get install -y python3-venv python3-pip python3-dev python3-setuptools
 
 # Create virtual environment
+echo "Creating Python virtual environment..."
 python3 -m venv venv
 
 # Activate virtual environment
 source venv/bin/activate
 
-# Install dependencies
+# Upgrade pip
+pip install --upgrade pip
+
+# Install Python dependencies
+echo "Installing Python dependencies..."
 pip install -r requirements.txt
 
+# Copy .env.example to .env if it doesn't exist
+if [ ! -f .env ]; then
+    echo "Creating .env file from template..."
+    cp .env.example .env
+    echo "Please edit .env and add your FREE_CURRENCY_API_KEY"
+fi
+
+echo ""
 echo "Setup complete!"
-echo "To activate the environment, run: source venv/bin/activate"
-echo "To run the application: python main.py"
+echo ""
+echo "Next steps:"
+echo "1. Edit .env and add your FREE_CURRENCY_API_KEY"
+echo "2. If SPI warning appeared, enable SPI: sudo raspi-config -> Interface Options -> SPI -> Enable"
+echo "3. To activate the environment: source venv/bin/activate"
+echo "4. To run the application: python main.py"
+echo ""
+echo "The app will run in simulation mode if e-paper display is not connected."
