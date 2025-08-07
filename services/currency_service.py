@@ -3,6 +3,7 @@
 import logging
 from datetime import datetime
 import freecurrencyapi
+from .cache_service import cache_service
 
 class CurrencyService:
     """Service class to handle currency exchange rate operations"""
@@ -62,12 +63,30 @@ class CurrencyService:
     
     def get_usd_brl_eur_brl_rates(self):
         """
-        Convenience method to get USD/BRL and EUR/BRL rates
+        Convenience method to get USD/BRL and EUR/BRL rates with caching
         
         Returns:
             dict: Exchange rates for USD/BRL and EUR/BRL with timestamp
         """
-        return self.get_exchange_rates(base_currency='BRL', target_currencies=['USD', 'EUR'])
+        cache_key = "exchange_rates_usd_eur_brl"
+        screen_type = "exchange_rates"
+        
+        # Try to get from cache first
+        cached_data = cache_service.get(cache_key)
+        if cached_data:
+            self.logger.debug("Using cached exchange rates")
+            return cached_data
+        
+        # Fetch fresh data
+        self.logger.info("Fetching fresh exchange rates from API")
+        fresh_data = self.get_exchange_rates(base_currency='BRL', target_currencies=['USD', 'EUR'])
+        
+        # Cache the result if successful
+        if fresh_data:
+            ttl = cache_service.get_ttl_for_screen(screen_type)
+            cache_service.set(cache_key, fresh_data, ttl)
+        
+        return fresh_data
     
     def get_btc_rates(self):
         """

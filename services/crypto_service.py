@@ -3,6 +3,12 @@
 import logging
 import requests
 from datetime import datetime
+import os
+import sys
+
+# Add services to path for cache import
+sys.path.append(os.path.dirname(__file__))
+from cache_service import cache_service
 
 class CryptoService:
     """Service class to handle cryptocurrency price operations"""
@@ -191,7 +197,7 @@ class CryptoService:
     
     def get_btc_prices(self, preferred_source='coingecko'):
         """
-        Get BTC prices with fallback to different sources
+        Get BTC prices with caching and fallback to different sources
         
         Args:
             preferred_source (str): Preferred API source
@@ -199,16 +205,33 @@ class CryptoService:
         Returns:
             dict: BTC prices with fallback
         """
+        cache_key = f"btc_prices_{preferred_source}"
+        screen_type = "bitcoin_prices"
+        
+        # Try to get from cache first
+        cached_data = cache_service.get(cache_key)
+        if cached_data:
+            self.logger.debug(f"Using cached BTC prices from {preferred_source}")
+            return cached_data
+        
+        # Fetch fresh data
+        self.logger.info(f"Fetching fresh BTC prices from {preferred_source}")
+        
         sources = {
             'coingecko': self.get_btc_prices_coingecko,
             'coinmarketcap': self.get_btc_prices_coinmarketcap,
             'binance': self.get_btc_prices_binance
         }
         
+        result = None
+        
         # Try preferred source first
         if preferred_source in sources:
             result = sources[preferred_source]()
             if result:
+                # Cache successful result
+                ttl = cache_service.get_ttl_for_screen(screen_type)
+                cache_service.set(cache_key, result, ttl)
                 return result
         
         # Fallback to other sources
@@ -217,6 +240,10 @@ class CryptoService:
                 self.logger.info(f"Trying fallback source: {source_name}")
                 result = source_func()
                 if result:
+                    # Cache fallback result with shorter TTL
+                    ttl = cache_service.get_ttl_for_screen(screen_type) // 2  # Half TTL for fallback
+                    fallback_cache_key = f"btc_prices_{source_name}_fallback"
+                    cache_service.set(fallback_cache_key, result, ttl)
                     return result
         
         self.logger.error("All crypto API sources failed")

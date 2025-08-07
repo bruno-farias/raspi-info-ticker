@@ -14,6 +14,7 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
 from services.currency_service import CurrencyService
 from services.display_service import DisplayService
+from services.cache_service import cache_service
 from config.display_config import DisplayConfig
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -36,6 +37,12 @@ class CurrencyTicker:
         
         # Get refresh interval from environment, default to 15 seconds
         self.refresh_interval = int(os.getenv('REFRESH_INTERVAL', '15'))
+        
+        # Log cache configuration
+        cache_stats = cache_service.get_cache_stats()
+        self.logger.info(f"Cache initialized - Default TTL: {cache_stats['default_ttl']}s")
+        if cache_stats['screen_configs']:
+            self.logger.info(f"Per-screen cache: {cache_stats['screen_configs']}")
         
     def run(self):
         """Main function to cycle through and display different screens"""
@@ -67,6 +74,17 @@ class CurrencyTicker:
                 
                 # Move to next screen for next iteration
                 self.display_config.next_screen()
+                
+                # Clean up expired cache entries periodically (every 10th iteration)
+                if hasattr(self, '_iteration_count'):
+                    self._iteration_count += 1
+                else:
+                    self._iteration_count = 1
+                
+                if self._iteration_count % 10 == 0:
+                    cleaned = cache_service.cleanup_expired()
+                    if cleaned > 0:
+                        self.logger.debug(f"Cleaned up {cleaned} expired cache entries")
                 
                 # Wait for refresh interval
                 time.sleep(self.refresh_interval)

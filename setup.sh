@@ -19,6 +19,14 @@ echo "Installing system dependencies..."
 sudo apt-get update
 sudo apt-get install -y python3-venv python3-pip python3-dev python3-setuptools
 
+# Install system packages needed for cairosvg (SVG support) and numpy
+echo "Installing SVG support and math libraries..."
+sudo apt-get install -y libcairo2-dev libgirepository1.0-dev pkg-config
+
+# Install system packages for numpy (math/array processing)
+echo "Installing numpy dependencies..."
+sudo apt-get install -y python3-numpy python3-scipy libatlas-base-dev gfortran
+
 # Create virtual environment
 echo "Creating Python virtual environment..."
 python3 -m venv venv

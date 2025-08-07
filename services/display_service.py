@@ -146,22 +146,39 @@ class DisplayService:
             import cairosvg
             from io import BytesIO
             
-            # Convert SVG to PNG in memory
+            # Convert SVG to PNG in memory with better settings for e-paper
             png_data = cairosvg.svg2png(
                 url=svg_path,
                 output_width=size,
-                output_height=size
+                output_height=size,
+                background_color='white'  # Ensure white background
             )
             
             # Load PNG data into PIL Image
             logo = Image.open(BytesIO(png_data))
             
+            # Ensure we have RGBA mode first for proper processing
+            if logo.mode == 'RGBA':
+                # Create a white background
+                background = Image.new('RGB', logo.size, (255, 255, 255))
+                # Composite the logo onto white background
+                background.paste(logo, mask=logo.split()[-1])  # Use alpha channel as mask
+                logo = background
+            
             # Convert to grayscale
             if logo.mode != 'L':
                 logo = logo.convert('L')
             
+            # Apply threshold to make it more crisp for e-paper
+            # This helps with rendering issues on monochrome displays
+            import numpy as np
+            logo_array = np.array(logo)
+            # Apply threshold: anything darker than 128 becomes black (0), rest becomes white (255)
+            logo_array = np.where(logo_array < 128, 0, 255).astype(np.uint8)
+            logo = Image.fromarray(logo_array, mode='L')
+            
             # Convert to 1-bit monochrome for e-paper
-            logo = logo.convert('1', dither=Image.Dither.FLOYDSTEINBERG)
+            logo = logo.convert('1')  # No dithering for cleaner logo
             
             self.logger.debug(f"SVG logo loaded and converted: {logo.size}")
             return logo
@@ -176,6 +193,24 @@ class DisplayService:
                 return self._process_bitmap_logo(logo, size)
             except Exception as e:
                 self.logger.error(f"Cannot load SVG without cairosvg: {e}")
+                raise
+        
+        except ImportError as e:
+            if 'numpy' in str(e):
+                self.logger.warning("numpy not available, using simpler SVG processing")
+                # Fallback without numpy
+                png_data = cairosvg.svg2png(
+                    url=svg_path,
+                    output_width=size,
+                    output_height=size,
+                    background_color='white'
+                )
+                logo = Image.open(BytesIO(png_data))
+                if logo.mode != 'L':
+                    logo = logo.convert('L')
+                logo = logo.convert('1')
+                return logo
+            else:
                 raise
         
         except Exception as e:
