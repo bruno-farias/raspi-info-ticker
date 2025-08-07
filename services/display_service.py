@@ -79,6 +79,43 @@ class DisplayService:
         
         return font_large, font_medium, font_small
     
+    def load_weather_icon(self, icon_filename, size=35):
+        """
+        Load weather icon from assets/weather directory
+        
+        Args:
+            icon_filename (str): Icon filename (e.g., 'sunny.svg', 'rain.png')
+            size (int): Desired size for the icon
+            
+        Returns:
+            PIL.Image: Processed weather icon or None if not found
+        """
+        if not icon_filename:
+            return None
+        
+        try:
+            assets_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'weather')
+            icon_path = os.path.join(assets_dir, icon_filename)
+            
+            if os.path.exists(icon_path):
+                return self._load_logo_file(icon_path, size)
+            else:
+                # Try different extensions if exact filename not found
+                base_name = os.path.splitext(icon_filename)[0]
+                extensions = ['.svg', '.png', '.webp', '.jpg', '.jpeg']
+                
+                for ext in extensions:
+                    test_path = os.path.join(assets_dir, f"{base_name}{ext}")
+                    if os.path.exists(test_path):
+                        return self._load_logo_file(test_path, size)
+                
+                self.logger.warning(f"Weather icon not found: {icon_filename}")
+                return None
+                
+        except Exception as e:
+            self.logger.error(f"Error loading weather icon {icon_filename}: {e}")
+            return None
+    
     def load_btc_logo(self, size=35):
         """
         Load and prepare Bitcoin logo image (supports PNG, WebP, SVG)
@@ -306,6 +343,39 @@ class DisplayService:
         draw.line([(center_x - currency_offset, b_top - 6), (center_x - currency_offset, b_bottom + 6)], fill=0, width=1)
         draw.line([(center_x + currency_offset, b_top - 6), (center_x + currency_offset, b_bottom + 6)], fill=0, width=1)
     
+    def _draw_weather_fallback(self, draw, x, y, size=35):
+        """
+        Draw a simple weather fallback icon (cloud shape)
+        
+        Args:
+            draw: PIL ImageDraw object
+            x (int): X position for icon center
+            y (int): Y position for icon center
+            size (int): Size of the icon
+        """
+        # Draw a simple cloud shape
+        half_size = size // 2
+        
+        # Main cloud body (ellipse)
+        draw.ellipse(
+            [(x - half_size + 5, y - half_size // 2), 
+             (x + half_size - 5, y + half_size // 2)], 
+            outline=0, width=2
+        )
+        
+        # Cloud bumps (smaller circles)
+        bump_size = size // 4
+        draw.ellipse(
+            [(x - half_size, y - bump_size), 
+             (x - half_size + bump_size * 2, y + bump_size)], 
+            outline=0, width=1
+        )
+        draw.ellipse(
+            [(x + half_size - bump_size * 2, y - bump_size), 
+             (x + half_size, y + bump_size)], 
+            outline=0, width=1
+        )
+    
     def create_display_image(self, screen_data):
         """
         Create an image with configurable screen data
@@ -344,27 +414,46 @@ class DisplayService:
                     draw.text((10, y_pos), line, font=font_medium, fill=0)
                     y_pos += 20
             
-            # Draw logo if requested
-            if show_logo and logo_type == 'btc':
-                # Position logo on the right side, centered vertically for the rates area
+            # Draw logo/icon if requested
+            if show_logo:
                 logo_x = self.width - 40  # 40 pixels from right edge
                 logo_y = 50  # Center it in the rates display area
                 
-                # Try to load the image logo first
-                logo_image = self.load_btc_logo(size=35)
-                
-                if logo_image:
-                    # Calculate position for pasting (top-left corner)
-                    paste_x = logo_x - logo_image.width // 2
-                    paste_y = logo_y - logo_image.height // 2
+                if logo_type == 'btc':
+                    # Bitcoin logo
+                    logo_image = self.load_btc_logo(size=35)
                     
-                    # Paste the logo image onto the main image
-                    image.paste(logo_image, (paste_x, paste_y))
-                    self.logger.debug(f"Bitcoin image logo displayed at ({paste_x}, {paste_y})")
-                else:
-                    # Fallback to drawn logo
-                    self.draw_btc_logo_fallback(draw, logo_x, logo_y, size=35)
-                    self.logger.debug("Using fallback drawn Bitcoin logo")
+                    if logo_image:
+                        # Calculate position for pasting (top-left corner)
+                        paste_x = logo_x - logo_image.width // 2
+                        paste_y = logo_y - logo_image.height // 2
+                        
+                        # Paste the logo image onto the main image
+                        image.paste(logo_image, (paste_x, paste_y))
+                        self.logger.debug(f"Bitcoin image logo displayed at ({paste_x}, {paste_y})")
+                    else:
+                        # Fallback to drawn logo
+                        self.draw_btc_logo_fallback(draw, logo_x, logo_y, size=35)
+                        self.logger.debug("Using fallback drawn Bitcoin logo")
+                
+                elif logo_type == 'weather':
+                    # Weather icon
+                    icon_filename = screen_data.get('weather_icon_filename')
+                    if icon_filename:
+                        weather_icon = self.load_weather_icon(icon_filename, size=35)
+                        
+                        if weather_icon:
+                            # Calculate position for pasting (top-left corner)
+                            paste_x = logo_x - weather_icon.width // 2
+                            paste_y = logo_y - weather_icon.height // 2
+                            
+                            # Paste the weather icon onto the main image
+                            image.paste(weather_icon, (paste_x, paste_y))
+                            self.logger.debug(f"Weather icon {icon_filename} displayed at ({paste_x}, {paste_y})")
+                        else:
+                            # Draw a simple weather fallback (cloud shape)
+                            self._draw_weather_fallback(draw, logo_x, logo_y)
+                            self.logger.debug("Using fallback weather icon")
             
             # Data timestamp
             data_timestamp = rates_data.get('timestamp', 'N/A')

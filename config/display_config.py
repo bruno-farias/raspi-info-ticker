@@ -8,6 +8,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from services.crypto_service import CryptoService
+from services.weather_service import WeatherService
 
 class DisplayConfig:
     """Configuration class for display cycling system"""
@@ -27,10 +28,14 @@ class DisplayConfig:
         self.crypto_service = CryptoService(crypto_api_key)
         self.crypto_source = os.getenv('CRYPTO_API_SOURCE', 'coingecko')
         
+        # Initialize weather service
+        self.weather_service = WeatherService()
+        
         # Define available screens
         self.available_screens = {
             'exchange_rates': ("Exchange Rates", self._get_fiat_rates, self._display_fiat_rates),
             'bitcoin_prices': ("Bitcoin Prices", self._get_btc_rates, self._display_btc_rates),
+            'weather': ("Weather", self._get_weather_data, self._display_weather_data),
         }
         
         # Get screen order from environment or use default
@@ -76,10 +81,17 @@ class DisplayConfig:
                 'total_screens': len(self.screens)
             }
             
-            # Add logo information for Bitcoin screen
+            # Add logo/icon information for specific screens
             if title == "Bitcoin Prices":
                 screen_data['show_logo'] = True
                 screen_data['logo_type'] = 'btc'
+            elif title == "Weather":
+                screen_data['show_logo'] = True
+                screen_data['logo_type'] = 'weather'
+                # Add weather icon filename
+                if rates_data:
+                    icon_filename = self.weather_service.get_weather_icon_filename(rates_data)
+                    screen_data['weather_icon_filename'] = icon_filename
             
             return screen_data
         return None
@@ -106,6 +118,10 @@ class DisplayConfig:
     def _get_btc_rates(self):
         """Get BTC/USD and BTC/EUR rates from crypto service"""
         return self.crypto_service.get_btc_prices(preferred_source=self.crypto_source)
+    
+    def _get_weather_data(self):
+        """Get weather data from weather service"""
+        return self.weather_service.get_weather_data()
     
     def _display_fiat_rates(self, rates_data):
         """
@@ -152,4 +168,30 @@ class DisplayConfig:
         else:
             lines.append("BTC/EUR: Not available")
             
+        return lines
+    
+    def _display_weather_data(self, weather_data):
+        """
+        Format weather data for display
+        
+        Args:
+            weather_data (dict): Weather data
+            
+        Returns:
+            list: List of display lines
+        """
+        if not weather_data:
+            return ["Failed to fetch weather"]
+        
+        lines = []
+        
+        # Temperature and location
+        city = weather_data.get('city', 'Unknown')
+        temp = weather_data.get('temperature', 0)
+        lines.append(f"{city}: {temp}°C")
+        
+        # Weather description
+        description = weather_data.get('weather_description', 'Unknown')
+        lines.append(f"{description}")
+        
         return lines
