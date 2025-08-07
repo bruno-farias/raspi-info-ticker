@@ -6,10 +6,10 @@ import logging
 from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont
 
-# Add waveshare_epd to path if it exists locally
-waveshare_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'waveshare_epd')
-if os.path.exists(waveshare_path):
-    sys.path.insert(0, os.path.dirname(waveshare_path))
+# Add waveshare_epd to path if it exists locally (matching example.py structure)
+libdir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'waveshare_epd')
+if os.path.exists(libdir):
+    sys.path.append(os.path.dirname(libdir))
 
 # Try to import e-paper display, fallback to simulation mode if not available
 try:
