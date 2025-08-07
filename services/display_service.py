@@ -90,7 +90,7 @@ class DisplayService:
             PIL.Image: Processed Bitcoin logo or None if not found
         """
         try:
-            logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', '645839.webp')
+            logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'wrapped-bitcoin.png')
             
             if os.path.exists(logo_path):
                 # Load the image
