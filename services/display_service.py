@@ -19,8 +19,8 @@ try:
 except ImportError as e:
     DISPLAY_AVAILABLE = False
     print(f"DEBUG: waveshare_epd import failed: {e}")
-    print(f"DEBUG: Checked path: {waveshare_path}")
-    print(f"DEBUG: Path exists: {os.path.exists(waveshare_path)}")
+    print(f"DEBUG: Checked libdir: {libdir}")
+    print(f"DEBUG: Libdir exists: {os.path.exists(libdir)}")
 except RuntimeError as e:
     DISPLAY_AVAILABLE = False
     print(f"DEBUG: GPIO initialization failed (hardware issue): {e}")
@@ -429,17 +429,47 @@ class DisplayService:
             rates_data = screen_data.get('rates_data')
             
             if display_function and rates_data:
-                lines = display_function(rates_data)
-                y_pos = 35
+                display_result = display_function(rates_data)
                 
-                # Determine max lines based on screen type
-                max_lines = 4 if title == "Weather" else 2  # More lines for weather
-                line_spacing = 15 if title == "Weather" else 20  # Tighter spacing for weather
-                font_to_use = font_small if title == "Weather" else font_medium
-                
-                for line in lines[:max_lines]:
-                    draw.text((10, y_pos), line, font=font_to_use, fill=0)
-                    y_pos += line_spacing
+                # Handle different display formats
+                if title == "Weather" and isinstance(display_result, dict):
+                    # New weather layout with separate left and right sections
+                    left_lines = display_result.get('left_lines', [])
+                    right_details = display_result.get('right_details', [])
+                    
+                    # Draw left side lines (main weather info)
+                    y_pos = 35
+                    for line in left_lines[:2]:  # Max 2 lines on left
+                        draw.text((10, y_pos), line, font=font_small, fill=0)
+                        y_pos += 15
+                    
+                    # Draw right side details (below weather icon)
+                    if right_details:
+                        right_x = self.width - 85  # Position for right-aligned text
+                        right_y = 65  # Start below the weather icon
+                        
+                        for detail in right_details[:3]:  # Max 3 detail lines
+                            # Right-align the text by calculating text width
+                            bbox = draw.textbbox((0, 0), detail, font=font_small)
+                            text_width = bbox[2] - bbox[0]
+                            actual_x = self.width - text_width - 10  # 10px margin from right edge
+                            
+                            draw.text((actual_x, right_y), detail, font=font_small, fill=0)
+                            right_y += 12  # Tighter spacing for right side details
+                            
+                else:
+                    # Traditional layout for non-weather screens (backward compatibility)
+                    lines = display_result if isinstance(display_result, list) else []
+                    y_pos = 35
+                    
+                    # Determine max lines based on screen type
+                    max_lines = 4 if title == "Weather" else 2
+                    line_spacing = 15 if title == "Weather" else 20
+                    font_to_use = font_small if title == "Weather" else font_medium
+                    
+                    for line in lines[:max_lines]:
+                        draw.text((10, y_pos), line, font=font_to_use, fill=0)
+                        y_pos += line_spacing
             
             # Draw logo/icon if requested
             if show_logo:

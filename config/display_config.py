@@ -172,36 +172,41 @@ class DisplayConfig:
     
     def _display_weather_data(self, weather_data):
         """
-        Format weather data for display with detailed information
+        Format weather data for display with improved layout to avoid collisions
+        Returns both left-side text and right-side details for positioning
         
         Args:
             weather_data (dict): Weather data
             
         Returns:
-            list: List of display lines
+            dict: Layout data with 'left_lines' and 'right_details' sections
         """
         if not weather_data:
-            return ["Failed to fetch weather"]
+            return {"left_lines": ["Failed to fetch weather"], "right_details": []}
         
-        lines = []
-        
-        # Main temperature and location
+        # Main info for left side (below title, next to weather icon)
         city = weather_data.get('city', 'Unknown')
         temp = weather_data.get('temperature', 0)
-        lines.append(f"{city}: {temp}°C")
-        
-        # Weather description
         description = weather_data.get('weather_description', 'Unknown')
-        lines.append(f"{description}")
         
-        # Temperature range
+        left_lines = [
+            f"{city}: {temp}°C",
+            f"{description}"
+        ]
+        
+        # Detailed stats for right side (below weather icon)  
         temp_min = weather_data.get('temp_min', 0)
         temp_max = weather_data.get('temp_max', 0)
-        lines.append(f"Range: {temp_min}°C - {temp_max}°C")
-        
-        # Humidity and Wind
         humidity = weather_data.get('humidity', 0)
         wind_speed = weather_data.get('wind_speed', 0)
-        lines.append(f"Humidity: {humidity}% Wind: {wind_speed}m/s")
         
-        return lines
+        right_details = [
+            f"Range: {temp_min}°C - {temp_max}°C",
+            f"Humidity: {humidity}%",
+            f"Wind: {wind_speed}m/s"
+        ]
+        
+        return {
+            "left_lines": left_lines,
+            "right_details": right_details
+        }

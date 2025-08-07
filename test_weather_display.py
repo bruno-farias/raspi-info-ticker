@@ -63,7 +63,7 @@ class TestWeatherDisplay(unittest.TestCase):
         self.assertTrue(result['timestamp'].endswith('(cached)'))
     
     def test_display_weather_data(self):
-        """Test weather data display formatting with detailed information"""
+        """Test weather data display formatting with improved layout"""
         config = DisplayConfig(self.mock_currency_service)
         
         weather_data = {
@@ -78,20 +78,36 @@ class TestWeatherDisplay(unittest.TestCase):
             'timestamp': '10:30:15'
         }
         
-        lines = config._display_weather_data(weather_data)
+        result = config._display_weather_data(weather_data)
         
-        self.assertEqual(len(lines), 4)
-        self.assertEqual(lines[0], 'Vienna: 22.5°C')
-        self.assertEqual(lines[1], 'Clear Sky')
-        self.assertEqual(lines[2], 'Range: 18.0°C - 25.0°C')
-        self.assertEqual(lines[3], 'Humidity: 65% Wind: 3.2m/s')
+        # Should return dict with left_lines and right_details
+        self.assertIsInstance(result, dict)
+        self.assertIn('left_lines', result)
+        self.assertIn('right_details', result)
+        
+        # Check left side content (main info)
+        left_lines = result['left_lines']
+        self.assertEqual(len(left_lines), 2)
+        self.assertEqual(left_lines[0], 'Vienna: 22.5°C')
+        self.assertEqual(left_lines[1], 'Clear Sky')
+        
+        # Check right side content (details)
+        right_details = result['right_details']
+        self.assertEqual(len(right_details), 3)
+        self.assertEqual(right_details[0], 'Range: 18.0°C - 25.0°C')
+        self.assertEqual(right_details[1], 'Humidity: 65%')
+        self.assertEqual(right_details[2], 'Wind: 3.2m/s')
     
     def test_display_weather_data_no_data(self):
         """Test weather data display with no data"""
         config = DisplayConfig(self.mock_currency_service)
         
-        lines = config._display_weather_data(None)
-        self.assertEqual(lines, ['Failed to fetch weather'])
+        result = config._display_weather_data(None)
+        
+        # Should return dict format even for no data
+        self.assertIsInstance(result, dict)
+        self.assertEqual(result['left_lines'], ['Failed to fetch weather'])
+        self.assertEqual(result['right_details'], [])
     
     def test_display_weather_data_missing_fields(self):
         """Test weather data display with missing fields"""
@@ -102,13 +118,23 @@ class TestWeatherDisplay(unittest.TestCase):
             # Missing other fields - should default to 0 or 'Unknown'
         }
         
-        lines = config._display_weather_data(weather_data)
+        result = config._display_weather_data(weather_data)
         
-        self.assertEqual(len(lines), 4)
-        self.assertEqual(lines[0], 'Unknown: 22.5°C')
-        self.assertEqual(lines[1], 'Unknown')
-        self.assertEqual(lines[2], 'Range: 0°C - 0°C')
-        self.assertEqual(lines[3], 'Humidity: 0% Wind: 0m/s')
+        # Should return dict format
+        self.assertIsInstance(result, dict)
+        
+        # Check left side content (main info)
+        left_lines = result['left_lines']
+        self.assertEqual(len(left_lines), 2)
+        self.assertEqual(left_lines[0], 'Unknown: 22.5°C')
+        self.assertEqual(left_lines[1], 'Unknown')
+        
+        # Check right side content (details)
+        right_details = result['right_details']
+        self.assertEqual(len(right_details), 3)
+        self.assertEqual(right_details[0], 'Range: 0°C - 0°C')
+        self.assertEqual(right_details[1], 'Humidity: 0%')
+        self.assertEqual(right_details[2], 'Wind: 0m/s')
     
     @patch('services.weather_service.cache_service')
     @patch.dict(os.environ, {'SCREEN_ORDER': 'weather'})
