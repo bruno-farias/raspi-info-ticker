@@ -1,9 +1,15 @@
 #!/usr/bin/python
 # -*- coding:utf-8 -*-
 import os
+import sys
 import logging
 from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont
+
+# Add waveshare_epd to path if it exists locally
+waveshare_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'waveshare_epd')
+if os.path.exists(waveshare_path):
+    sys.path.insert(0, os.path.dirname(waveshare_path))
 
 # Try to import e-paper display, fallback to simulation mode if not available
 try:
@@ -13,6 +19,8 @@ try:
 except ImportError as e:
     DISPLAY_AVAILABLE = False
     print(f"DEBUG: waveshare_epd import failed: {e}")
+    print(f"DEBUG: Checked path: {waveshare_path}")
+    print(f"DEBUG: Path exists: {os.path.exists(waveshare_path)}")
 
 class DisplayService:
     """Service class to handle e-paper display operations"""
