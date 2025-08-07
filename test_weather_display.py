@@ -160,7 +160,7 @@ class TestWeatherDisplay(unittest.TestCase):
         self.assertEqual(screen_data['title'], 'Weather')
         self.assertTrue(screen_data['show_logo'])
         self.assertEqual(screen_data['logo_type'], 'weather')
-        self.assertEqual(screen_data['weather_icon_filename'], '01d@2x.png')
+        self.assertEqual(screen_data['weather_icon_filename'], '01d@2x.svg')
         self.assertIn('rates_data', screen_data)
     
     def test_weather_icon_mapping_integration(self):
@@ -169,10 +169,10 @@ class TestWeatherDisplay(unittest.TestCase):
         
         # Test different weather conditions
         test_cases = [
-            ({'weather_icon': '01d'}, '01d@2x.png'),
-            ({'weather_icon': '10d'}, '10d@2x.png'),
-            ({'weather_icon': '11d'}, '11d@2x.png'),
-            ({'weather_icon': '13d'}, '13d@2x.png'),
+            ({'weather_icon': '01d'}, '01d@2x.svg'),
+            ({'weather_icon': '10d'}, '10d@2x.svg'),
+            ({'weather_icon': '11d'}, '11d@2x.svg'),
+            ({'weather_icon': '13d'}, '13d@2x.svg'),
         ]
         
         for weather_data, expected_icon in test_cases:

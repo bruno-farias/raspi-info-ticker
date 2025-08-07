@@ -245,26 +245,26 @@ class TestWeatherService(unittest.TestCase):
         # Test various weather conditions
         test_cases = [
             # Clear sky
-            ({'weather_icon': '01d'}, '01d@2x.png'),
-            ({'weather_icon': '01n'}, '01n@2x.png'),
+            ({'weather_icon': '01d'}, '01d@2x.svg'),
+            ({'weather_icon': '01n'}, '01n@2x.svg'),
             
             # Clouds
-            ({'weather_icon': '02d'}, '02d@2x.png'),
-            ({'weather_icon': '03d'}, '03d@2x.png'),
-            ({'weather_icon': '04d'}, '04d@2x.png'),
+            ({'weather_icon': '02d'}, '02d@2x.svg'),
+            ({'weather_icon': '03d'}, '03d@2x.svg'),
+            ({'weather_icon': '04d'}, '04d@2x.svg'),
             
             # Rain
-            ({'weather_icon': '09d'}, '09d@2x.png'),
-            ({'weather_icon': '10d'}, '10d@2x.png'),
-            ({'weather_icon': '10n'}, '10n@2x.png'),
+            ({'weather_icon': '09d'}, '09d@2x.svg'),
+            ({'weather_icon': '10d'}, '10d@2x.svg'),
+            ({'weather_icon': '10n'}, '10n@2x.svg'),
             
             # Special conditions
-            ({'weather_icon': '11d'}, '11d@2x.png'),
-            ({'weather_icon': '13d'}, '13d@2x.png'),
-            ({'weather_icon': '50d'}, '50d@2x.png'),
+            ({'weather_icon': '11d'}, '11d@2x.svg'),
+            ({'weather_icon': '13d'}, '13d@2x.svg'),
+            ({'weather_icon': '50d'}, '50d@2x.svg'),
             
             # Unknown/default - should fallback to sunny day
-            ({'weather_icon': 'unknown'}, '01d@2x.png'),
+            ({'weather_icon': 'unknown'}, '01d@2x.svg'),
         ]
         
         for weather_data, expected_filename in test_cases:
@@ -282,9 +282,9 @@ class TestWeatherService(unittest.TestCase):
         result = service.get_weather_icon_filename({})
         self.assertIsNone(result)
         
-        # Dict with missing weather_icon should use default '01d' -> '01d@2x.png'
+        # Dict with missing weather_icon should use default '01d' -> '01d@2x.svg'
         result = service.get_weather_icon_filename({'temperature': 25})
-        self.assertEqual(result, '01d@2x.png')
+        self.assertEqual(result, '01d@2x.svg')
     
     def test_location_string_building(self):
         """Test different location configurations"""
