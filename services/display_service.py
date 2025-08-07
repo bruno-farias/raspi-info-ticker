@@ -295,9 +295,17 @@ class DisplayService:
             # Convert to numpy array for processing
             logo_array = np.array(logo)
             
-            # Apply stronger threshold for weather icons to improve contrast
-            # Weather icons often have subtle gradients that don't work well on e-paper
-            threshold = 160  # Higher threshold for cleaner icons
+            # Use adaptive thresholding for weather icons
+            # Check if image has sufficient contrast before applying high threshold
+            min_val, max_val = logo_array.min(), logo_array.max()
+            contrast = max_val - min_val
+            
+            if contrast > 100:  # Good contrast - use moderate threshold
+                threshold = 128  # Standard threshold
+            else:  # Low contrast - use lower threshold to preserve details
+                threshold = 100  # Lower threshold for subtle icons
+                
+            self.logger.debug(f"Weather icon contrast: {contrast}, using threshold: {threshold}")
             logo_array = np.where(logo_array < threshold, 0, 255).astype(np.uint8)
             logo = Image.fromarray(logo_array, mode='L')
             
@@ -305,9 +313,19 @@ class DisplayService:
             logo = logo.convert('1')
             
         except ImportError:
-            # Fallback without numpy - use PIL's built-in conversion
+            # Fallback without numpy - use PIL's built-in conversion with adaptive threshold
+            # First, try to determine if we need a lower threshold
+            extrema = logo.getextrema()
+            contrast = extrema[1] - extrema[0] if extrema[1] is not None else 0
+            
+            if contrast > 100:
+                threshold = 128  # Standard threshold
+            else:
+                threshold = 100  # Lower threshold for subtle icons
+                
+            self.logger.debug(f"Weather icon contrast (fallback): {contrast}, using threshold: {threshold}")
             # Apply point transformation for better contrast
-            logo = logo.point(lambda x: 0 if x < 160 else 255, mode='L')
+            logo = logo.point(lambda x: 0 if x < threshold else 255, mode='L')
             logo = logo.convert('1')
         
         self.logger.debug(f"Bitmap logo processed: {logo.size}")
@@ -501,6 +519,7 @@ class DisplayService:
                     # Weather icon
                     icon_filename = screen_data.get('weather_icon_filename')
                     if icon_filename:
+                        self.logger.info(f"Loading weather icon: {icon_filename}")
                         weather_icon = self.load_weather_icon(icon_filename, size=35)
                         
                         if weather_icon:
@@ -510,11 +529,15 @@ class DisplayService:
                             
                             # Paste the weather icon onto the main image
                             image.paste(weather_icon, (paste_x, paste_y))
-                            self.logger.debug(f"Weather icon {icon_filename} displayed at ({paste_x}, {paste_y})")
+                            self.logger.info(f"✓ Weather icon {icon_filename} displayed at ({paste_x}, {paste_y})")
                         else:
                             # Draw a simple weather fallback (cloud shape)
                             self._draw_weather_fallback(draw, logo_x, logo_y)
-                            self.logger.debug("Using fallback weather icon")
+                            self.logger.warning(f"⚠ Weather icon {icon_filename} failed to load, using fallback cloud icon")
+                    else:
+                        # No icon filename provided
+                        self._draw_weather_fallback(draw, logo_x, logo_y)
+                        self.logger.warning("⚠ No weather icon filename provided, using fallback cloud icon")
             
             # Data timestamp
             data_timestamp = rates_data.get('timestamp', 'N/A')
