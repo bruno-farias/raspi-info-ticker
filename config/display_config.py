@@ -146,7 +146,7 @@ class DisplayConfig:
     
     def _display_btc_rates(self, rates_data):
         """
-        Format Bitcoin rates for display
+        Format Bitcoin rates for display with 24h change indicators
         
         Args:
             rates_data (dict): Bitcoin rates data
@@ -158,13 +158,40 @@ class DisplayConfig:
             return ["Failed to fetch BTC rates"]
         
         lines = []
+        
+        # Format USD price with change indicator
         if rates_data.get('BTC/USD'):
-            lines.append(f"BTC/USD: ${rates_data['BTC/USD']:,}")
+            usd_line = f"BTC/USD: ${rates_data['BTC/USD']:,}"
+            
+            # Add 24h change indicator if available
+            if 'usd_24h_change' in rates_data:
+                change = rates_data['usd_24h_change']
+                if change > 0:
+                    usd_line += f" ↑+{change}%"
+                elif change < 0:
+                    usd_line += f" ↓{change}%"
+                else:
+                    usd_line += f" ={change}%"
+            
+            lines.append(usd_line)
         else:
             lines.append("BTC/USD: Not available")
-            
+        
+        # Format EUR price with change indicator  
         if rates_data.get('BTC/EUR'):
-            lines.append(f"BTC/EUR: €{rates_data['BTC/EUR']:,}")
+            eur_line = f"BTC/EUR: €{rates_data['BTC/EUR']:,}"
+            
+            # Add 24h change indicator if available
+            if 'eur_24h_change' in rates_data:
+                change = rates_data['eur_24h_change']
+                if change > 0:
+                    eur_line += f" ↑+{change}%"
+                elif change < 0:
+                    eur_line += f" ↓{change}%"
+                else:
+                    eur_line += f" ={change}%"
+            
+            lines.append(eur_line)
         else:
             lines.append("BTC/EUR: Not available")
             
