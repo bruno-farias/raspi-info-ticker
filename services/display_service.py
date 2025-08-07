@@ -9,8 +9,10 @@ from PIL import Image, ImageDraw, ImageFont
 try:
     from waveshare_epd import epd2in13_V4
     DISPLAY_AVAILABLE = True
-except ImportError:
+    print("DEBUG: waveshare_epd imported successfully")
+except ImportError as e:
     DISPLAY_AVAILABLE = False
+    print(f"DEBUG: waveshare_epd import failed: {e}")
 
 class DisplayService:
     """Service class to handle e-paper display operations"""
