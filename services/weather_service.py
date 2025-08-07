@@ -181,48 +181,48 @@ class WeatherService:
         if not weather_data:
             return None
         
-        # OpenWeatherMap icon mapping to our local icons
+        # OpenWeatherMap icon mapping to downloaded official icons
         # See: https://openweathermap.org/weather-conditions
         icon_map = {
             # Clear sky
-            '01d': 'sunny.svg',      # clear sky day
-            '01n': 'clear_night.svg', # clear sky night
+            '01d': '01d@2x.png',     # clear sky day
+            '01n': '01n@2x.png',     # clear sky night
             
             # Few clouds
-            '02d': 'partly_cloudy.svg', # few clouds day
-            '02n': 'partly_cloudy_night.svg', # few clouds night
+            '02d': '02d@2x.png',     # few clouds day
+            '02n': '02n@2x.png',     # few clouds night
             
             # Scattered clouds
-            '03d': 'cloudy.svg',     # scattered clouds day
-            '03n': 'cloudy.svg',     # scattered clouds night
+            '03d': '03d@2x.png',     # scattered clouds day
+            '03n': '03n@2x.png',     # scattered clouds night
             
             # Broken clouds
-            '04d': 'overcast.svg',   # broken clouds day
-            '04n': 'overcast.svg',   # broken clouds night
+            '04d': '04d@2x.png',     # broken clouds day
+            '04n': '04n@2x.png',     # broken clouds night
             
             # Shower rain
-            '09d': 'rain_heavy.svg', # shower rain day
-            '09n': 'rain_heavy.svg', # shower rain night
+            '09d': '09d@2x.png',     # shower rain day
+            '09n': '09n@2x.png',     # shower rain night
             
             # Rain
-            '10d': 'rain.svg',       # rain day
-            '10n': 'rain_night.svg', # rain night
+            '10d': '10d@2x.png',     # rain day
+            '10n': '10n@2x.png',     # rain night
             
             # Thunderstorm
-            '11d': 'thunderstorm.svg', # thunderstorm day
-            '11n': 'thunderstorm.svg', # thunderstorm night
+            '11d': '11d@2x.png',     # thunderstorm day
+            '11n': '11n@2x.png',     # thunderstorm night
             
             # Snow
-            '13d': 'snow.svg',       # snow day
-            '13n': 'snow.svg',       # snow night
+            '13d': '13d@2x.png',     # snow day
+            '13n': '13n@2x.png',     # snow night
             
             # Mist/Fog
-            '50d': 'fog.svg',        # mist day
-            '50n': 'fog.svg',        # mist night
+            '50d': '50d@2x.png',     # mist day
+            '50n': '50n@2x.png',     # mist night
         }
         
         weather_icon = weather_data.get('weather_icon', '01d')
-        icon_filename = icon_map.get(weather_icon, 'default.svg')
+        icon_filename = icon_map.get(weather_icon, '01d@2x.png')  # fallback to sunny day icon
         
         self.logger.debug(f"Weather icon {weather_icon} mapped to {icon_filename}")
         return icon_filename

@@ -245,26 +245,26 @@ class TestWeatherService(unittest.TestCase):
         # Test various weather conditions
         test_cases = [
             # Clear sky
-            ({'weather_icon': '01d'}, 'sunny.svg'),
-            ({'weather_icon': '01n'}, 'clear_night.svg'),
+            ({'weather_icon': '01d'}, '01d@2x.png'),
+            ({'weather_icon': '01n'}, '01n@2x.png'),
             
             # Clouds
-            ({'weather_icon': '02d'}, 'partly_cloudy.svg'),
-            ({'weather_icon': '03d'}, 'cloudy.svg'),
-            ({'weather_icon': '04d'}, 'overcast.svg'),
+            ({'weather_icon': '02d'}, '02d@2x.png'),
+            ({'weather_icon': '03d'}, '03d@2x.png'),
+            ({'weather_icon': '04d'}, '04d@2x.png'),
             
             # Rain
-            ({'weather_icon': '09d'}, 'rain_heavy.svg'),
-            ({'weather_icon': '10d'}, 'rain.svg'),
-            ({'weather_icon': '10n'}, 'rain_night.svg'),
+            ({'weather_icon': '09d'}, '09d@2x.png'),
+            ({'weather_icon': '10d'}, '10d@2x.png'),
+            ({'weather_icon': '10n'}, '10n@2x.png'),
             
             # Special conditions
-            ({'weather_icon': '11d'}, 'thunderstorm.svg'),
-            ({'weather_icon': '13d'}, 'snow.svg'),
-            ({'weather_icon': '50d'}, 'fog.svg'),
+            ({'weather_icon': '11d'}, '11d@2x.png'),
+            ({'weather_icon': '13d'}, '13d@2x.png'),
+            ({'weather_icon': '50d'}, '50d@2x.png'),
             
-            # Unknown/default
-            ({'weather_icon': 'unknown'}, 'default.svg'),
+            # Unknown/default - should fallback to sunny day
+            ({'weather_icon': 'unknown'}, '01d@2x.png'),
         ]
         
         for weather_data, expected_filename in test_cases:
@@ -282,9 +282,9 @@ class TestWeatherService(unittest.TestCase):
         result = service.get_weather_icon_filename({})
         self.assertIsNone(result)
         
-        # Dict with missing weather_icon should use default '01d' -> 'sunny.svg'
+        # Dict with missing weather_icon should use default '01d' -> '01d@2x.png'
         result = service.get_weather_icon_filename({'temperature': 25})
-        self.assertEqual(result, 'sunny.svg')
+        self.assertEqual(result, '01d@2x.png')
     
     def test_location_string_building(self):
         """Test different location configurations"""
