@@ -265,7 +265,7 @@ class DisplayService:
     
     def _process_bitmap_logo(self, logo, size):
         """
-        Process bitmap logo for e-paper display
+        Process bitmap logo for e-paper display with improved weather icon handling
         
         Args:
             logo (PIL.Image): Input logo image
@@ -274,6 +274,14 @@ class DisplayService:
         Returns:
             PIL.Image: Processed logo
         """
+        # Handle RGBA images (like OpenWeatherMap icons) with transparency
+        if logo.mode == 'RGBA':
+            # Create white background
+            background = Image.new('RGB', logo.size, (255, 255, 255))
+            # Composite logo onto white background using alpha channel
+            background.paste(logo, mask=logo.split()[-1])
+            logo = background
+        
         # Convert to grayscale if needed
         if logo.mode != 'L':
             logo = logo.convert('L')
@@ -281,8 +289,26 @@ class DisplayService:
         # Resize to desired size while maintaining aspect ratio
         logo.thumbnail((size, size), Image.Resampling.LANCZOS)
         
-        # Convert to 1-bit (monochrome) for e-paper display
-        logo = logo.convert('1', dither=Image.Dither.FLOYDSTEINBERG)
+        # Apply contrast enhancement for better e-paper visibility
+        try:
+            import numpy as np
+            # Convert to numpy array for processing
+            logo_array = np.array(logo)
+            
+            # Apply stronger threshold for weather icons to improve contrast
+            # Weather icons often have subtle gradients that don't work well on e-paper
+            threshold = 160  # Higher threshold for cleaner icons
+            logo_array = np.where(logo_array < threshold, 0, 255).astype(np.uint8)
+            logo = Image.fromarray(logo_array, mode='L')
+            
+            # Convert to 1-bit monochrome without dithering for cleaner weather icons
+            logo = logo.convert('1')
+            
+        except ImportError:
+            # Fallback without numpy - use PIL's built-in conversion
+            # Apply point transformation for better contrast
+            logo = logo.point(lambda x: 0 if x < 160 else 255, mode='L')
+            logo = logo.convert('1')
         
         self.logger.debug(f"Bitmap logo processed: {logo.size}")
         return logo
@@ -405,14 +431,24 @@ class DisplayService:
             if display_function and rates_data:
                 lines = display_function(rates_data)
                 y_pos = 35
-                for line in lines[:2]:  # Max 2 lines for rates
-                    draw.text((10, y_pos), line, font=font_medium, fill=0)
-                    y_pos += 20
+                
+                # Determine max lines based on screen type
+                max_lines = 4 if title == "Weather" else 2  # More lines for weather
+                line_spacing = 15 if title == "Weather" else 20  # Tighter spacing for weather
+                font_to_use = font_small if title == "Weather" else font_medium
+                
+                for line in lines[:max_lines]:
+                    draw.text((10, y_pos), line, font=font_to_use, fill=0)
+                    y_pos += line_spacing
             
             # Draw logo/icon if requested
             if show_logo:
                 logo_x = self.width - 40  # 40 pixels from right edge
-                logo_y = 50  # Center it in the rates display area
+                # Adjust logo position based on screen type
+                if title == "Weather":
+                    logo_y = 45  # Higher position for weather due to more text
+                else:
+                    logo_y = 50  # Original position for other screens
                 
                 if logo_type == 'btc':
                     # Bitcoin logo

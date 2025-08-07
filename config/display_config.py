@@ -172,7 +172,7 @@ class DisplayConfig:
     
     def _display_weather_data(self, weather_data):
         """
-        Format weather data for display
+        Format weather data for display with detailed information
         
         Args:
             weather_data (dict): Weather data
@@ -185,7 +185,7 @@ class DisplayConfig:
         
         lines = []
         
-        # Temperature and location
+        # Main temperature and location
         city = weather_data.get('city', 'Unknown')
         temp = weather_data.get('temperature', 0)
         lines.append(f"{city}: {temp}°C")
@@ -193,5 +193,15 @@ class DisplayConfig:
         # Weather description
         description = weather_data.get('weather_description', 'Unknown')
         lines.append(f"{description}")
+        
+        # Temperature range
+        temp_min = weather_data.get('temp_min', 0)
+        temp_max = weather_data.get('temp_max', 0)
+        lines.append(f"Range: {temp_min}°C - {temp_max}°C")
+        
+        # Humidity and Wind
+        humidity = weather_data.get('humidity', 0)
+        wind_speed = weather_data.get('wind_speed', 0)
+        lines.append(f"Humidity: {humidity}% Wind: {wind_speed}m/s")
         
         return lines

@@ -63,7 +63,7 @@ class TestWeatherDisplay(unittest.TestCase):
         self.assertTrue(result['timestamp'].endswith('(cached)'))
     
     def test_display_weather_data(self):
-        """Test weather data display formatting"""
+        """Test weather data display formatting with detailed information"""
         config = DisplayConfig(self.mock_currency_service)
         
         weather_data = {
@@ -71,14 +71,20 @@ class TestWeatherDisplay(unittest.TestCase):
             'temperature': 22.5,
             'weather_description': 'Clear Sky',
             'weather_icon': '01d',
+            'temp_min': 18.0,
+            'temp_max': 25.0,
+            'humidity': 65,
+            'wind_speed': 3.2,
             'timestamp': '10:30:15'
         }
         
         lines = config._display_weather_data(weather_data)
         
-        self.assertEqual(len(lines), 2)
+        self.assertEqual(len(lines), 4)
         self.assertEqual(lines[0], 'Vienna: 22.5°C')
         self.assertEqual(lines[1], 'Clear Sky')
+        self.assertEqual(lines[2], 'Range: 18.0°C - 25.0°C')
+        self.assertEqual(lines[3], 'Humidity: 65% Wind: 3.2m/s')
     
     def test_display_weather_data_no_data(self):
         """Test weather data display with no data"""
@@ -93,14 +99,16 @@ class TestWeatherDisplay(unittest.TestCase):
         
         weather_data = {
             'temperature': 22.5,
-            # Missing city and description
+            # Missing other fields - should default to 0 or 'Unknown'
         }
         
         lines = config._display_weather_data(weather_data)
         
-        self.assertEqual(len(lines), 2)
+        self.assertEqual(len(lines), 4)
         self.assertEqual(lines[0], 'Unknown: 22.5°C')
         self.assertEqual(lines[1], 'Unknown')
+        self.assertEqual(lines[2], 'Range: 0°C - 0°C')
+        self.assertEqual(lines[3], 'Humidity: 0% Wind: 0m/s')
     
     @patch('services.weather_service.cache_service')
     @patch.dict(os.environ, {'SCREEN_ORDER': 'weather'})
