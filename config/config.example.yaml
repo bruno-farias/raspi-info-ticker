@@ -36,6 +36,7 @@ web_server:
 display:
   mode: "all"  # Options: epaper, terminal, web, all
   refresh_interval: 15  # seconds
+  cycle_interval: 10  # Seconds to show each plugin before cycling to next
   epaper_model: "epd2in13_V4"
   epaper_rotation: 0
   epaper_partial_refresh: true
@@ -79,21 +80,24 @@ plugins:
     language: "en"
     show_forecast: false
 
-  # Currency plugin
+  # Currency plugin - supports multiple base currencies
   currency:
     enabled: true
     update_interval: 60  # 1 minute
     cache_ttl: 300  # 5 minutes
     priority: 2
     api_key: "YOUR_FREECURRENCYAPI_KEY"
-    base_currency: "USD"
-    target_currencies:
-      - "EUR"
-      - "GBP"
-      - "JPY"
-      - "BRL"
-      - "CAD"
-      - "AUD"
+    # Multiple currency configurations (cycles through each base)
+    currencies:
+      - base_currency: "USD"
+        target_currencies: ["EUR", "GBP", "JPY", "BRL"]
+      - base_currency: "EUR"
+        target_currencies: ["USD", "GBP", "BRL"]
+      - base_currency: "BRL"
+        target_currencies: ["USD", "EUR", "JPY"]
+    # Or use single base currency (legacy format)
+    # base_currency: "USD"
+    # target_currencies: ["EUR", "GBP", "JPY", "BRL"]
     show_change: true
     decimal_places: 4
 

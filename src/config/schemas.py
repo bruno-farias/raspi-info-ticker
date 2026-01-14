@@ -58,6 +58,11 @@ class CurrencyConfig(BaseModel):
         default=["EUR", "GBP", "JPY", "BRL"],
         description="Currencies to track"
     )
+    # Support for multiple currency configurations
+    currencies: Optional[List[Dict[str, Any]]] = Field(
+        default=None,
+        description="List of currency configurations (base + targets)"
+    )
     decimal_places: int = Field(default=4, description="Decimal places for rates")
     show_change: bool = Field(default=True, description="Show 24h change")
 

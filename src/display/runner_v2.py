@@ -160,9 +160,26 @@ class EnhancedDisplayRunner:
                     instance_id = f"weather_{city_name.lower().replace(' ', '_')}"
                     plugin_registry.create_plugin("weather", city_config, instance_id=instance_id)
 
-            # Currency
+            # Currency - create one instance per base currency if multiple configs specified
             if plugins_config.currency.enabled:
-                plugin_registry.create_plugin("currency", plugins_config.currency)
+                if plugins_config.currency.currencies:
+                    # Multiple currency configurations
+                    for idx, curr_config in enumerate(plugins_config.currency.currencies):
+                        # Create a copy of currency config for this specific base
+                        from copy import deepcopy
+                        base_config = deepcopy(plugins_config.currency)
+                        base_config.base_currency = curr_config.get("base_currency", "USD")
+                        base_config.target_currencies = curr_config.get("target_currencies", ["EUR"])
+                        base_config.currencies = None  # Clear to avoid recursion
+
+                        # Create instance with unique ID
+                        base_name = base_config.base_currency.lower()
+                        instance_id = f"currency_{base_name}"
+                        plugin_registry.create_plugin("currency", base_config, instance_id=instance_id)
+                        self.logger.info(f"Created currency instance: {instance_id} -> {base_config.target_currencies}")
+                else:
+                    # Single currency configuration
+                    plugin_registry.create_plugin("currency", plugins_config.currency)
 
             # Crypto
             if plugins_config.crypto.enabled:
