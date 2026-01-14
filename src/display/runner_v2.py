@@ -185,7 +185,7 @@ class EnhancedDisplayRunner:
             if plugins_config.crypto.enabled:
                 plugin_registry.create_plugin("crypto", plugins_config.crypto)
 
-            # Clock
+            # Clock (moved to end of cycle)
             if plugins_config.clock.enabled:
                 plugin_registry.create_plugin("clock", plugins_config.clock)
 

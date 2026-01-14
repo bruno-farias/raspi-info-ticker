@@ -100,6 +100,46 @@ class EInkRenderer:
 
         return fonts
 
+    def _load_utility_icon(self, icon_name: str) -> Optional[Image.Image]:
+        """
+        Load utility icon from assets/weather/icons directory.
+
+        Args:
+            icon_name: Icon name (e.g., "humidity", "wind")
+
+        Returns:
+            PIL Image of the icon, or None if not found
+        """
+        icon_dir = Path(__file__).parent.parent.parent / "assets" / "weather" / "icons"
+        # Try common SVG naming patterns
+        icon_path = icon_dir / f"{icon_name}-svgrepo-com.svg"
+
+        if not icon_path.exists():
+            icon_path = icon_dir / f"{icon_name}.svg"
+
+        if not icon_path.exists():
+            self.logger.warning(f"Utility icon not found: {icon_name}")
+            return None
+
+        try:
+            if SVG_SUPPORT:
+                import io
+                png_data = cairosvg.svg2png(url=str(icon_path), background_color='white')
+                icon_image = Image.open(io.BytesIO(png_data))
+            else:
+                return None
+
+            # Convert to grayscale and apply threshold
+            icon_image = icon_image.convert('L')
+            threshold = 128
+            icon_image = icon_image.point(lambda x: 0 if x < threshold else 255, mode='1')
+
+            return icon_image
+
+        except Exception as e:
+            self.logger.error(f"Error loading utility icon {icon_name}: {e}")
+            return None
+
     def _load_weather_icon(self, icon_code: str) -> Optional[Image.Image]:
         """
         Load weather icon from assets/weather directory.
@@ -234,23 +274,21 @@ class EInkRenderer:
             draw.text((x, y), date_str, font=font, fill=self.BLACK)
 
     def _render_weather_layout(self, draw: ImageDraw.Draw, data: PluginData):
-        """Render clean weather layout inspired by InkyPi."""
+        """Render clean weather layout with icons."""
         weather = data.data
 
         # City name (top left)
         city = f"{weather.get('city', 'Unknown')}"
-        draw.text((10, 5), city, font=self.fonts["header"], fill=self.BLACK)
+        draw.text((5, 3), city, font=self.fonts["header"], fill=self.BLACK)
 
-        # Weather icon (top right)
+        # Weather icon (top right) - larger for better visibility
         icon_code = weather.get("icon", "01d")
         weather_icon = self._load_weather_icon(icon_code)
+        icon_x = self.width - 50 - 5
         if weather_icon:
-            # Scale icon to fit nicely (40x40 pixels)
-            icon_size = 40
+            icon_size = 50
             weather_icon = weather_icon.resize((icon_size, icon_size), Image.Resampling.LANCZOS)
-            # Position in top right
-            icon_x = self.width - icon_size - 10
-            icon_y = 5
+            icon_y = 0
             # Draw the icon pixel by pixel (for 1-bit compatibility)
             image = draw.im
             for x in range(icon_size):
@@ -259,74 +297,150 @@ class EInkRenderer:
                     if pixel == 0:  # Black pixel
                         image.putpixel((icon_x + x, icon_y + y), 0)
 
-        # Temperature (large, prominent)
+        # Temperature (large, prominent) - centered left
         temp = weather.get("temperature", 0)
         unit = "°C" if weather.get("units") == "metric" else "°F"
         temp_str = f"{temp:.0f}{unit}"
+        draw.text((5, 28), temp_str, font=self.fonts["huge"], fill=self.BLACK)
 
-        draw.text((10, 30), temp_str, font=self.fonts["huge"], fill=self.BLACK)
-
-        # Weather description
+        # Weather description below temperature
         desc = weather.get("description", "")
         if desc:
-            draw.text((10, 65), desc, font=self.fonts["medium"], fill=self.BLACK)
+            draw.text((5, 55), desc, font=self.fonts["small"], fill=self.BLACK)
 
-        # Additional details (right side, below icon)
-        details_x = self.width - 90
-        details_y = 55
-
-        # Min/Max temps
+        # Detail row: Min/Max, Humidity, Wind (split into three sections)
+        detail_y = 69
         temp_min = weather.get("temp_min", 0)
         temp_max = weather.get("temp_max", 0)
-        draw.text((details_x, details_y), f"↓{temp_min:.0f}° ↑{temp_max:.0f}°",
-                 font=self.fonts["small"], fill=self.BLACK)
-
-        # Humidity
         humidity = weather.get("humidity", 0)
-        draw.text((details_x, details_y + 15), f"💧 {humidity}%",
-                 font=self.fonts["small"], fill=self.BLACK)
+        wind_speed = weather.get("wind_speed", 0)
+        wind_direction = weather.get("wind_direction", "")
 
-        # Wind
-        wind = weather.get("wind_speed", 0)
-        draw.text((details_x, details_y + 30), f"🌬 {wind}m/s",
-                 font=self.fonts["small"], fill=self.BLACK)
+        # Split display into thirds (width ~250px, so ~83px per section)
+        section_width = self.width // 3
+
+        # Min/Max temps (left third)
+        draw.text((5, detail_y), f"L:{temp_min:.0f}° H:{temp_max:.0f}°",
+                 font=self.fonts["tiny"], fill=self.BLACK)
+
+        # Humidity icon and text (center third)
+        humidity_x = section_width + 10
+        humidity_icon = self._load_utility_icon("humidity")
+        if humidity_icon:
+            humidity_icon_size = 18
+            humidity_icon = humidity_icon.resize((humidity_icon_size, humidity_icon_size), Image.Resampling.LANCZOS)
+            image = draw.im
+            for x in range(humidity_icon_size):
+                for y in range(humidity_icon_size):
+                    pixel = humidity_icon.getpixel((x, y))
+                    if pixel == 0:
+                        image.putpixel((humidity_x + x, detail_y - 2 + y), 0)
+            draw.text((humidity_x + humidity_icon_size + 2, detail_y), f"{humidity}%",
+                     font=self.fonts["medium"], fill=self.BLACK)
+        else:
+            draw.text((humidity_x, detail_y), f"{humidity}%",
+                     font=self.fonts["medium"], fill=self.BLACK)
+
+        # Wind icon and text (right third)
+        wind_x = (section_width * 2) + 10
+        wind_icon = self._load_utility_icon("wind-flag")
+        # Convert wind speed to km/h
+        if weather.get("units") == "metric":
+            # OpenWeatherMap returns m/s for metric, convert to km/h
+            wind_speed_kmh = wind_speed * 3.6
+        else:
+            # Convert mph to km/h
+            wind_speed_kmh = wind_speed * 1.60934
+
+        if wind_icon:
+            wind_icon_size = 18
+            wind_icon = wind_icon.resize((wind_icon_size, wind_icon_size), Image.Resampling.LANCZOS)
+            image = draw.im
+            for x in range(wind_icon_size):
+                for y in range(wind_icon_size):
+                    pixel = wind_icon.getpixel((x, y))
+                    if pixel == 0:
+                        image.putpixel((wind_x + x, detail_y - 2 + y), 0)
+            wind_text = f"{wind_speed_kmh:.0f}km/h"
+            draw.text((wind_x + wind_icon_size + 2, detail_y), wind_text,
+                     font=self.fonts["medium"], fill=self.BLACK)
+        else:
+            wind_text = f"{wind_speed_kmh:.0f}km/h"
+            draw.text((wind_x, detail_y), wind_text,
+                     font=self.fonts["medium"], fill=self.BLACK)
+
+        # Forecast at the bottom (if available)
+        forecast = weather.get("forecast", [])
+        if forecast:
+            # Draw separator line
+            forecast_y = 88
+            draw.line([(5, forecast_y), (self.width - 5, forecast_y)], fill=self.BLACK, width=1)
+
+            # Show next 3 forecast periods
+            forecast_data = forecast[:3]
+            spacing = (self.width - 10) // 3
+
+            for idx, fc in enumerate(forecast_data):
+                x_pos = 5 + (idx * spacing)
+
+                # Time
+                time_str = fc.get("time", "")
+                draw.text((x_pos, forecast_y + 3), time_str,
+                         font=self.fonts["tiny"], fill=self.BLACK)
+
+                # Temperature
+                temp_fc = fc.get("temp", 0)
+                draw.text((x_pos, forecast_y + 15), f"{temp_fc:.0f}°",
+                         font=self.fonts["small"], fill=self.BLACK)
+
+                # Small weather icon
+                icon_code = fc.get("icon", "01d")
+                fc_icon = self._load_weather_icon(icon_code)
+                if fc_icon:
+                    icon_size = 16
+                    fc_icon = fc_icon.resize((icon_size, icon_size), Image.Resampling.LANCZOS)
+                    icon_x_pos = x_pos + 30
+                    icon_y_pos = forecast_y + 12
+                    image = draw.im
+                    for x in range(icon_size):
+                        for y in range(icon_size):
+                            pixel = fc_icon.getpixel((x, y))
+                            if pixel == 0:
+                                image.putpixel((icon_x_pos + x, icon_y_pos + y), 0)
 
     def _render_currency_layout(self, draw: ImageDraw.Draw, data: PluginData):
-        """Render clean currency display."""
+        """Render clean currency display with large, readable text."""
         currency_data = data.data
 
-        # Title
-        draw.text((10, 5), "Exchange Rates", font=self.fonts["header"], fill=self.BLACK)
-
-        # Base currency
+        # Base currency as title (large)
         base = currency_data.get("base_currency", "USD")
-        draw.text((10, 28), f"Base: {base}", font=self.fonts["small"], fill=self.BLACK)
+        draw.text((5, 5), base, font=self.fonts["title"], fill=self.BLACK)
 
-        # Rates in a clean table format
-        y_offset = 45
+        # Rates in large, readable format
+        y_offset = 35
         pairs = currency_data.get("pairs", [])
 
-        for i, pair_data in enumerate(pairs[:4]):  # Limit to 4 for space
+        for i, pair_data in enumerate(pairs[:3]):  # Limit to 3 for better readability
             pair = pair_data.get("pair", "")
             rate = pair_data.get("rate", 0)
 
-            # Currency pair
-            draw.text((10, y_offset), pair, font=self.fonts["medium"], fill=self.BLACK)
+            # Extract target currency from pair (e.g., "USD/EUR" -> "EUR")
+            if "/" in pair:
+                target_currency = pair.split("/")[1]
+            else:
+                target_currency = pair
 
-            # Rate (right-aligned)
+            # Currency name (left)
+            draw.text((5, y_offset), target_currency, font=self.fonts["header"], fill=self.BLACK)
+
+            # Rate (right-aligned, large)
             rate_str = f"{rate:.4f}"
-            bbox = draw.textbbox((0, 0), rate_str, font=self.fonts["medium"])
+            bbox = draw.textbbox((0, 0), rate_str, font=self.fonts["header"])
             text_width = bbox[2] - bbox[0]
-            draw.text((self.width - text_width - 50, y_offset), rate_str,
-                     font=self.fonts["medium"], fill=self.BLACK)
+            draw.text((self.width - text_width - 5, y_offset), rate_str,
+                     font=self.fonts["header"], fill=self.BLACK)
 
-            # Change indicator (if available)
-            if "change_indicator" in pair_data:
-                change = pair_data["change_indicator"]
-                draw.text((self.width - 40, y_offset), change,
-                         font=self.fonts["small"], fill=self.BLACK)
-
-            y_offset += 18
+            y_offset += 28
 
     def _render_crypto_layout(self, draw: ImageDraw.Draw, data: PluginData):
         """Render cryptocurrency prices."""
