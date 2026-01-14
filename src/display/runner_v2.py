@@ -70,10 +70,13 @@ class EnhancedDisplayRunner:
                 height=self.epd.width
             )
 
-        # Initialize scheduler with config cycle interval
+        # Initialize scheduler with config cycle interval and plugin order
         cycle_interval = self.config.display.cycle_interval if self.config and self.config.display else 30
+        plugin_order = self.config.display.plugin_order if self.config and self.config.display else None
         self.logger.info(f"Using cycle interval: {cycle_interval} seconds")
-        self.scheduler = DisplayScheduler(self.renderer, cycle_interval=cycle_interval)
+        if plugin_order:
+            self.logger.info(f"Using custom plugin order: {plugin_order}")
+        self.scheduler = DisplayScheduler(self.renderer, cycle_interval=cycle_interval, plugin_order=plugin_order)
         self._configure_scheduler()
 
         # Initialize plugins

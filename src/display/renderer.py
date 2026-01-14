@@ -412,12 +412,60 @@ class EInkRenderer:
         """Render clean currency display with large, readable text."""
         currency_data = data.data
 
-        # Base currency as title (large)
+        # Currency symbols mapping
+        currency_symbols = {
+            "USD": "$", "EUR": "€", "GBP": "£", "JPY": "¥",
+            "BRL": "R$", "CNY": "¥", "INR": "₹", "RUB": "₽",
+            "AUD": "A$", "CAD": "C$", "CHF": "Fr", "KRW": "₩"
+        }
+
+        # Inverted title bar (black background, white text)
+        title_height = 32
+        draw.rectangle([(0, 0), (self.width, title_height)], fill=self.BLACK)
+
+        # Base currency as title with symbol (large, white text) - vertically centered
         base = currency_data.get("base_currency", "USD")
-        draw.text((5, 5), base, font=self.fonts["title"], fill=self.BLACK)
+        base_symbol = currency_symbols.get(base, base)
+        base_text = f"{base} {base_symbol}"
+        # Calculate vertical center
+        base_bbox = draw.textbbox((0, 0), base_text, font=self.fonts["title"])
+        base_text_height = base_bbox[3] - base_bbox[1]
+        base_y = (title_height - base_text_height) // 2
+        draw.text((5, base_y), base_text, font=self.fonts["title"], fill=self.WHITE)
+
+        # Date and time (top right, white text) - vertically centered as a group
+        date_str = data.timestamp.strftime("%d/%m/%y")
+        time_str = data.timestamp.strftime("%H:%M")
+
+        # Calculate dimensions for date
+        date_bbox = draw.textbbox((0, 0), date_str, font=self.fonts["tiny"])
+        date_width = date_bbox[2] - date_bbox[0]
+
+        # Calculate dimensions for time
+        time_bbox = draw.textbbox((0, 0), time_str, font=self.fonts["medium"])
+        time_width = time_bbox[2] - time_bbox[0]
+
+        # Use the wider of the two for alignment
+        max_width = max(date_width, time_width)
+
+        # Calculate total height (date + time + small spacing)
+        date_height = date_bbox[3] - date_bbox[1]
+        time_height = time_bbox[3] - time_bbox[1]
+        total_height = date_height + time_height + 2  # 2px spacing
+
+        # Center the entire block vertically
+        block_y = (title_height - total_height) // 2
+
+        # Draw date (centered above time)
+        date_x = self.width - max_width - 8 + (max_width - date_width) // 2
+        draw.text((date_x, block_y), date_str, font=self.fonts["tiny"], fill=self.WHITE)
+
+        # Draw time (centered below date)
+        time_x = self.width - max_width - 8 + (max_width - time_width) // 2
+        draw.text((time_x, block_y + date_height + 2), time_str, font=self.fonts["medium"], fill=self.WHITE)
 
         # Rates in large, readable format
-        y_offset = 35
+        y_offset = 38
         pairs = currency_data.get("pairs", [])
 
         for i, pair_data in enumerate(pairs[:3]):  # Limit to 3 for better readability
@@ -430,11 +478,14 @@ class EInkRenderer:
             else:
                 target_currency = pair
 
+            # Get currency symbol
+            target_symbol = currency_symbols.get(target_currency, target_currency)
+
             # Currency name (left)
             draw.text((5, y_offset), target_currency, font=self.fonts["header"], fill=self.BLACK)
 
-            # Rate (right-aligned, large)
-            rate_str = f"{rate:.4f}"
+            # Symbol and rate (right-aligned, large)
+            rate_str = f"{target_symbol}{rate:.4f}"
             bbox = draw.textbbox((0, 0), rate_str, font=self.fonts["header"])
             text_width = bbox[2] - bbox[0]
             draw.text((self.width - text_width - 5, y_offset), rate_str,
@@ -624,30 +675,71 @@ class EInkRenderer:
         return image
 
     def create_splash_screen(self, message: str = "Raspi Info Ticker") -> Image.Image:
-        """Create a splash screen for startup."""
-        image = Image.new('1', (self.width, self.height), self.WHITE)
+        """Create a splash screen for startup with PNG background."""
+        # Try to load PNG background first (preferred), then SVG
+        splash_png_path = Path(__file__).parent.parent.parent / "assets" / "splashscreen.png"
+        splash_svg_path = Path(__file__).parent.parent.parent / "assets" / "splashscreen.svg"
+
+        if splash_png_path.exists():
+            try:
+                # Load PNG directly
+                image = Image.open(splash_png_path)
+
+                # Resize if needed to match display dimensions
+                if image.size != (self.width, self.height):
+                    image = image.resize((self.width, self.height), Image.Resampling.LANCZOS)
+
+                # Convert to 1-bit black/white
+                image = image.convert('L')
+                threshold = 128
+                image = image.point(lambda x: 0 if x < threshold else 255, mode='1')
+
+            except Exception as e:
+                self.logger.warning(f"Failed to load splash PNG: {e}, trying SVG")
+                image = None
+        else:
+            image = None
+
+        # Fallback to SVG if PNG not available
+        if image is None and splash_svg_path.exists() and SVG_SUPPORT:
+            try:
+                import io
+                png_data = cairosvg.svg2png(
+                    url=str(splash_svg_path),
+                    output_width=self.width,
+                    output_height=self.height,
+                    background_color='white'
+                )
+                image = Image.open(io.BytesIO(png_data))
+                image = image.convert('L')
+                threshold = 128
+                image = image.point(lambda x: 0 if x < threshold else 255, mode='1')
+            except Exception as e:
+                self.logger.warning(f"Failed to load splash SVG: {e}, using plain background")
+                image = None
+
+        # Final fallback to plain background
+        if image is None:
+            self.logger.debug("No splash image found, using plain background")
+            image = Image.new('1', (self.width, self.height), self.WHITE)
+
         draw = ImageDraw.Draw(image)
 
-        # Center the message
-        font = self.fonts["large"]
+        # Message on the left side (vertically centered)
+        font = self.fonts["medium"]
         bbox = draw.textbbox((0, 0), message, font=font)
-        text_width = bbox[2] - bbox[0]
         text_height = bbox[3] - bbox[1]
-
-        x = (self.width - text_width) // 2
         y = (self.height - text_height) // 2
+        draw.text((5, y), message, font=font, fill=self.BLACK)
 
-        draw.text((x, y), message, font=font, fill=self.BLACK)
-
-        # Version info
+        # Version info on the right side (vertically centered)
         version = "v2.0"
-        font = self.fonts["small"]
+        font = self.fonts["medium"]
         bbox = draw.textbbox((0, 0), version, font=font)
         text_width = bbox[2] - bbox[0]
-
-        x = (self.width - text_width) // 2
-        y = self.height - 20
-
+        text_height = bbox[3] - bbox[1]
+        x = self.width - text_width - 5
+        y = (self.height - text_height) // 2
         draw.text((x, y), version, font=font, fill=self.BLACK)
 
         return image

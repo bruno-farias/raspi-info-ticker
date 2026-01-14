@@ -37,6 +37,13 @@ display:
   mode: "all"  # Options: epaper, terminal, web, all
   refresh_interval: 15  # seconds
   cycle_interval: 10  # Seconds to show each plugin before cycling to next
+
+  # Custom plugin cycle order (optional)
+  # If not specified, uses creation order: weather -> currency -> crypto -> clock
+  # Specify plugin types to control order. All instances of each type will be grouped together.
+  # Example: ['currency', 'weather', 'clock'] - shows all currency instances first, then weather, then clock (crypto disabled/skipped)
+  # plugin_order: ['currency', 'weather', 'crypto', 'clock']
+
   epaper_model: "epd2in13_V4"
   epaper_rotation: 0
   epaper_partial_refresh: true

@@ -38,7 +38,7 @@ class ScheduleEntry:
 class DisplayScheduler:
     """Manages scheduled display rotation for e-ink."""
 
-    def __init__(self, renderer: Optional[EInkRenderer] = None, cycle_interval: int = 30):
+    def __init__(self, renderer: Optional[EInkRenderer] = None, cycle_interval: int = 30, plugin_order: Optional[List[str]] = None):
         """Initialize display scheduler."""
         self.logger = logging.getLogger("display_scheduler")
         self.renderer = renderer or EInkRenderer()
@@ -47,6 +47,7 @@ class DisplayScheduler:
         self.mode = DisplayMode.CYCLE
         self.schedule: List[ScheduleEntry] = []
         self.current_plugin_index = 0
+        self.plugin_order = plugin_order  # Custom plugin cycle order
 
         # Timing configuration
         self.cycle_interval = cycle_interval  # seconds (configurable)
@@ -56,7 +57,10 @@ class DisplayScheduler:
         self.is_running = False
         self.current_task = None
 
-        self.logger.info(f"Scheduler initialized with cycle_interval={cycle_interval}s")
+        if plugin_order:
+            self.logger.info(f"Scheduler initialized with cycle_interval={cycle_interval}s, custom order={plugin_order}")
+        else:
+            self.logger.info(f"Scheduler initialized with cycle_interval={cycle_interval}s")
 
     def set_mode(self, mode: DisplayMode):
         """Set the display mode."""
@@ -114,12 +118,27 @@ class DisplayScheduler:
         if not plugins:
             return None
 
-        # Get the instance ID from the registry
+        # Get the instance IDs from the registry
         instance_ids = list(plugin_registry.plugins.keys())
         enabled_ids = [id for id in instance_ids if plugin_registry.plugins[id].config.enabled]
 
         if not enabled_ids:
             return None
+
+        # If custom plugin_order is specified, sort enabled_ids by that order
+        if self.plugin_order:
+            # Create ordered list based on plugin_order config
+            ordered_ids = []
+            for plugin_type in self.plugin_order:
+                # Find all instance IDs that start with this plugin type
+                matching_ids = [id for id in enabled_ids if id.startswith(plugin_type)]
+                ordered_ids.extend(matching_ids)
+
+            # Add any remaining plugins not in the order list
+            remaining_ids = [id for id in enabled_ids if id not in ordered_ids]
+            ordered_ids.extend(remaining_ids)
+
+            enabled_ids = ordered_ids if ordered_ids else enabled_ids
 
         instance_id = enabled_ids[self.current_plugin_index % len(enabled_ids)]
         return instance_id

@@ -158,6 +158,10 @@ class DisplayConfig(BaseModel):
     mode: DisplayMode = Field(default=DisplayMode.ALL)
     refresh_interval: int = Field(default=15, description="Display refresh interval in seconds")
     cycle_interval: int = Field(default=30, description="Seconds to show each plugin before cycling to next")
+    plugin_order: Optional[List[str]] = Field(
+        default=None,
+        description="Custom plugin cycle order (e.g., ['weather', 'currency', 'crypto', 'clock']). If not specified, uses creation order."
+    )
 
     # E-paper specific
     epaper_model: str = Field(default="epd2in13_V4", description="E-paper display model")
