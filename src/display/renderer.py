@@ -12,6 +12,12 @@ from PIL import Image, ImageDraw, ImageFont
 import os
 from pathlib import Path
 
+try:
+    import cairosvg
+    SVG_SUPPORT = True
+except ImportError:
+    SVG_SUPPORT = False
+
 from ..plugins import plugin_registry, PluginData
 from ..config import config_manager
 
@@ -93,6 +99,47 @@ class EInkRenderer:
                 fonts[name] = ImageFont.load_default()
 
         return fonts
+
+    def _load_weather_icon(self, icon_code: str) -> Optional[Image.Image]:
+        """
+        Load weather icon from assets/weather directory.
+
+        Args:
+            icon_code: OpenWeatherMap icon code (e.g., "01d", "10n")
+
+        Returns:
+            PIL Image of the weather icon, or None if not found
+        """
+        icon_dir = Path(__file__).parent.parent.parent / "assets" / "weather"
+        icon_path = icon_dir / f"{icon_code}@2x.svg"
+
+        if not icon_path.exists():
+            self.logger.warning(f"Weather icon not found: {icon_path}")
+            return None
+
+        try:
+            if SVG_SUPPORT:
+                # Convert SVG to PNG in memory with white background
+                import io
+                png_data = cairosvg.svg2png(url=str(icon_path), background_color='white')
+                icon_image = Image.open(io.BytesIO(png_data))
+            else:
+                self.logger.warning("cairosvg not available, skipping weather icon")
+                return None
+
+            # Convert to grayscale for e-ink
+            icon_image = icon_image.convert('L')
+
+            # Apply threshold to make it pure black and white
+            # Dark pixels (< threshold) become black (0), light pixels become white (255)
+            threshold = 128
+            icon_image = icon_image.point(lambda x: 0 if x < threshold else 255, mode='1')
+
+            return icon_image
+
+        except Exception as e:
+            self.logger.error(f"Error loading weather icon {icon_code}: {e}")
+            return None
 
     def render_plugin(self, plugin_data: PluginData) -> Image.Image:
         """
@@ -194,6 +241,24 @@ class EInkRenderer:
         city = f"{weather.get('city', 'Unknown')}"
         draw.text((10, 5), city, font=self.fonts["header"], fill=self.BLACK)
 
+        # Weather icon (top right)
+        icon_code = weather.get("icon", "01d")
+        weather_icon = self._load_weather_icon(icon_code)
+        if weather_icon:
+            # Scale icon to fit nicely (40x40 pixels)
+            icon_size = 40
+            weather_icon = weather_icon.resize((icon_size, icon_size), Image.Resampling.LANCZOS)
+            # Position in top right
+            icon_x = self.width - icon_size - 10
+            icon_y = 5
+            # Draw the icon pixel by pixel (for 1-bit compatibility)
+            image = draw.im
+            for x in range(icon_size):
+                for y in range(icon_size):
+                    pixel = weather_icon.getpixel((x, y))
+                    if pixel == 0:  # Black pixel
+                        image.putpixel((icon_x + x, icon_y + y), 0)
+
         # Temperature (large, prominent)
         temp = weather.get("temperature", 0)
         unit = "°C" if weather.get("units") == "metric" else "°F"
@@ -206,9 +271,9 @@ class EInkRenderer:
         if desc:
             draw.text((10, 65), desc, font=self.fonts["medium"], fill=self.BLACK)
 
-        # Additional details (right side)
+        # Additional details (right side, below icon)
         details_x = self.width - 90
-        details_y = 35
+        details_y = 55
 
         # Min/Max temps
         temp_min = weather.get("temp_min", 0)
