@@ -1,0 +1,129 @@
+# Optimized Configuration for Raspberry Pi Zero W
+# This configuration reduces resource usage for the limited 512MB RAM
+
+app_name: "Raspi Info Ticker - Pi Zero"
+version: "2.0.0"
+debug: false
+log_level: "WARNING"  # Reduce logging to save resources
+log_file: null  # Disable file logging to save SD card writes
+
+# Data directories
+data_dir: "./data"
+cache_dir: "./cache"
+plugin_dir: "./plugins"
+
+# Authentication - Disabled for headless operation
+auth:
+  provider: "none"  # No auth needed for display-only mode
+  secret_key: "not-needed-for-display-mode"
+
+# Web server - Disabled for Pi Zero W
+web_server:
+  enabled: false  # Disable to save resources
+  host: "0.0.0.0"
+  port: 8080
+
+# Display configuration optimized for e-paper
+display:
+  mode: "epaper"  # Only e-paper, not "all"
+  refresh_interval: 30  # Slower refresh to save CPU (30 seconds)
+  epaper_model: "epd2in13_V4"
+  epaper_rotation: 0
+  epaper_partial_refresh: true  # Use partial refresh to save power
+  epaper_clear_interval: 50  # Less frequent full refresh
+  terminal_width: 80
+  terminal_height: 24
+  terminal_colors: false  # Disable colors
+
+# Simple layout for better performance
+layout:
+  type: "list"  # Simpler than grid
+  columns: 1
+  rows: 1
+  spacing: 2
+  padding: 5
+  widget_order:
+    - "clock"
+    - "weather"
+    - "currency"
+    # - "crypto"  # Commented out to save resources
+  widget_sizes: {}
+
+# Plugin configurations optimized for Pi Zero W
+plugins:
+  # Weather plugin - reduced update frequency
+  weather:
+    enabled: true
+    update_interval: 600  # 10 minutes (was 300)
+    cache_ttl: 1200  # 20 minutes (was 600)
+    priority: 2
+    api_key: "YOUR_OPENWEATHERMAP_API_KEY"  # <-- ADD YOUR KEY HERE
+    cities:
+      - name: "London"  # Only one city to save API calls
+        country: "UK"
+    units: "metric"
+    language: "en"
+    show_forecast: false  # Disable forecast to save memory
+
+  # Currency plugin - reduced currencies
+  currency:
+    enabled: true
+    update_interval: 300  # 5 minutes (was 60)
+    cache_ttl: 600  # 10 minutes (was 300)
+    priority: 3
+    api_key: "YOUR_FREECURRENCYAPI_KEY"  # <-- ADD YOUR KEY HERE
+    base_currency: "USD"
+    target_currencies:  # Only essential currencies
+      - "EUR"
+      - "GBP"
+      - "BRL"
+    show_change: false  # Disable to reduce API calls
+    decimal_places: 2  # Less precision to save display space
+
+  # Cryptocurrency - DISABLED to save resources
+  crypto:
+    enabled: false  # Set to true only if really needed
+    update_interval: 120  # 2 minutes
+    cache_ttl: 240  # 4 minutes
+    priority: 4
+    api_key: null
+    provider: "coingecko"
+    cryptocurrencies:
+      - "bitcoin"
+    vs_currencies:
+      - "usd"
+    show_market_cap: false
+    show_volume: false
+    show_change_24h: false
+    show_change_7d: false
+
+  # Stock market - DISABLED
+  stock:
+    enabled: false
+
+  # Clock plugin - optimized for low refresh
+  clock:
+    enabled: true
+    update_interval: 60  # Update every minute (not every second)
+    cache_ttl: 0
+    priority: 1
+    timezone: null
+    format_24h: true
+    show_date: true
+    show_seconds: false  # Don't show seconds to reduce refreshes
+    date_format: "%d/%m/%Y"  # Shorter format
+    show_day_name: true
+    show_week_number: false
+
+  # Custom plugins
+  custom: {}
+
+# Performance notes for Pi Zero W:
+# - This config prioritizes stability over features
+# - Only essential plugins are enabled
+# - Update intervals are increased to reduce CPU usage
+# - Cache TTLs are extended to minimize API calls
+# - Web interface is disabled (use SSH if needed)
+# - Consider using a powered USB hub for stability
+# - Monitor temperature: vcgencmd measure_temp
+# - If crashes occur, increase swap or disable more plugins

@@ -1,0 +1,44 @@
+[Unit]
+Description=Raspi Info Ticker Display Service
+Documentation=https://github.com/yourusername/raspi-info-ticker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/raspi-info-ticker
+
+# Environment variables
+Environment="PATH=/home/pi/raspi-info-ticker/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="PYTHONPATH=/home/pi/raspi-info-ticker"
+Environment="PYTHONUNBUFFERED=1"
+
+# Start command
+ExecStart=/home/pi/raspi-info-ticker/venv/bin/python /home/pi/raspi-info-ticker/src/main.py display
+
+# Restart policy
+Restart=always
+RestartSec=10
+StartLimitInterval=60
+StartLimitBurst=3
+
+# Resource limits for Pi Zero W
+MemoryMax=400M
+CPUQuota=80%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=info-ticker
+
+# Security hardening (optional)
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/pi/raspi-info-ticker/data /home/pi/raspi-info-ticker/cache
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,153 @@
+# Raspi Info Ticker Configuration
+# Copy this file to config.yaml and update with your settings
+
+app_name: "Raspi Info Ticker"
+version: "2.0.0"
+debug: false
+log_level: "INFO"
+log_file: "info_ticker.log"
+
+# Data directories
+data_dir: "./data"
+cache_dir: "./cache"
+plugin_dir: "./plugins"
+
+# Authentication configuration
+auth:
+  provider: "basic"  # Options: none, basic, oauth, oidc
+  secret_key: "change-this-to-a-secure-secret-key"
+  username: "admin"
+  password_hash: null  # Will be set when you create a password
+  session_timeout: 3600
+  remember_me_duration: 604800
+
+# Web server configuration
+web_server:
+  enabled: true
+  host: "0.0.0.0"
+  port: 8080
+  ssl_enabled: false
+  ssl_cert: null
+  ssl_key: null
+  cors_origins: ["*"]
+  max_connections: 100
+
+# Display configuration
+display:
+  mode: "all"  # Options: epaper, terminal, web, all
+  refresh_interval: 15  # seconds
+  cycle_interval: 10  # Seconds to show each plugin before cycling to next
+  epaper_model: "epd2in13_V4"
+  epaper_rotation: 0
+  epaper_partial_refresh: true
+  epaper_clear_interval: 20
+  terminal_width: 80
+  terminal_height: 24
+  terminal_colors: true
+
+# Layout configuration
+layout:
+  type: "grid"  # Options: grid, list, carousel, custom
+  columns: 2
+  rows: 2
+  spacing: 5
+  padding: 10
+  widget_order:
+    - "clock"
+    - "weather"
+    - "currency"
+    - "crypto"
+  widget_sizes: {}
+
+# Plugin configurations
+plugins:
+  # Weather plugin
+  weather:
+    enabled: true
+    update_interval: 300  # 5 minutes
+    cache_ttl: 600  # 10 minutes
+    priority: 1
+    api_key: "8ff816b721fa379c177a4f8e105993ae"
+    cities:
+      - name: "Florianópolis"
+        country: "BR"
+      - name: "New York"
+        state: "NY"
+        country: "US"
+      - name: "Tokyo"
+        country: "JP"
+    units: "metric"  # Options: metric, imperial, kelvin
+    language: "pt-br"
+    show_forecast: false
+
+  # Currency plugin
+  currency:
+    enabled: true
+    update_interval: 60  # 1 minute
+    cache_ttl: 300  # 5 minutes
+    priority: 2
+    api_key: "fca_live_3BBIWnf0pkxIu1mOM1mLDAO1LskT0GZG1c551FBU"
+    base_currency: "USD"
+    target_currencies:
+      - "EUR"
+      - "GBP"
+      - "JPY"
+      - "BRL"
+      - "CAD"
+      - "AUD"
+    show_change: true
+    decimal_places: 4
+
+  # Cryptocurrency plugin
+  crypto:
+    enabled: true
+    update_interval: 30  # 30 seconds
+    cache_ttl: 60  # 1 minute
+    priority: 3
+    api_key: CG-BtUKV8g8iy6TsR89KS6ipDEV  # Optional for CoinGecko
+    provider: "coingecko"
+    cryptocurrencies:
+      - "bitcoin"
+      - "ethereum"
+      - "cardano"
+      - "polkadot"
+    vs_currencies:
+      - "usd"
+      - "eur"
+    show_market_cap: false
+    show_volume: false
+    show_change_24h: true
+    show_change_7d: false
+
+  # Stock market plugin
+  stock:
+    enabled: false
+    update_interval: 60
+    cache_ttl: 120
+    priority: 4
+    api_key: "YOUR_STOCK_API_KEY"
+    symbols:
+      - "AAPL"
+      - "GOOGL"
+      - "MSFT"
+      - "AMZN"
+      - "TSLA"
+    show_premarket: false
+    show_afterhours: false
+
+  # Clock plugin
+  clock:
+    enabled: true
+    update_interval: 1
+    cache_ttl: 0
+    priority: 0
+    timezone: null  # Use local timezone
+    format_24h: true
+    show_date: true
+    show_seconds: true
+    date_format: "%Y-%m-%d"
+    show_day_name: true
+    show_week_number: false
+
+  # Custom plugins
+  custom: {}
